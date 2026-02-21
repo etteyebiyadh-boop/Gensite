@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import { templates, getTemplateById, getDefaultContent, searchTemplates, getCategories, getTemplatesByCategory } from './templates'
 import { generateHtml } from './generateHtml'
@@ -165,13 +165,22 @@ function Builder({ onBack }) {
   const [dashboardCreating, setDashboardCreating] = useState(false)
   const [aiEditInput, setAiEditInput] = useState('')
   const [aiEditLoading, setAiEditLoading] = useState(false)
+  const [expandedCategories, setExpandedCategories] = useState(() => new Set()) // which categories show all templates
+  const categoryRefs = useRef({})
 
   const template = templateId ? getTemplateById(templateId) : null
+
+  const TEMPLATES_SHOWN_INITIAL = 8
 
   const templatesByCategory = useMemo(
     () => getTemplatesByCategory(searchQuery),
     [searchQuery]
   )
+
+  function scrollToCategory(cat) {
+    const el = categoryRefs.current[cat]
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   function pickTemplate(id) {
     const t = getTemplateById(id)
@@ -264,6 +273,21 @@ function Builder({ onBack }) {
         <section style={styles.pickSection}>
           <div style={styles.pickLayout}>
             <div style={styles.pickTemplates}>
+              <div style={styles.categoryNavSticky}>
+                <span style={styles.categoryNavLabel}>Jump to:</span>
+                <div style={styles.categoryNavPills}>
+                  {templatesByCategory.map(({ category }) => (
+                    <button
+                      key={category}
+                      type="button"
+                      onClick={() => scrollToCategory(category)}
+                      style={styles.categoryPill}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div style={styles.toolbar}>
                 <input
                   type="search"
@@ -273,28 +297,46 @@ function Builder({ onBack }) {
                   style={styles.searchInput}
                 />
               </div>
-              {templatesByCategory.map(({ category, templates: list }) => (
-                <div key={category} style={styles.categoryBlock}>
-                  <h2 style={styles.categoryTitle}>{category}</h2>
-                  <p style={styles.categoryDetail}>
-                    {list.length} template{list.length !== 1 ? 's' : ''} in this category
-                  </p>
-                  <div style={styles.templateGrid}>
-                    {list.map((t) => (
+              {templatesByCategory.map(({ category, templates: list }) => {
+                const showAll = expandedCategories.has(category) || list.length <= TEMPLATES_SHOWN_INITIAL
+                const visible = showAll ? list : list.slice(0, TEMPLATES_SHOWN_INITIAL)
+                const hiddenCount = list.length - TEMPLATES_SHOWN_INITIAL
+                return (
+                  <div
+                    key={category}
+                    ref={(el) => { categoryRefs.current[category] = el }}
+                    style={styles.categoryBlock}
+                  >
+                    <h2 style={styles.categoryTitle}>{category}</h2>
+                    <p style={styles.categoryDetail}>
+                      {list.length} template{list.length !== 1 ? 's' : ''} — just add your details
+                    </p>
+                    <div style={styles.templateGrid}>
+                      {visible.map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => pickTemplate(t.id)}
+                          style={{ ...styles.templateCard, borderLeft: `3px solid ${t.themeHex}` }}
+                        >
+                          <span style={styles.templateName}>{t.name}</span>
+                          <span style={styles.templateDesc}>{t.description}</span>
+                          <span style={styles.templateCategory}>{t.themeName}</span>
+                        </button>
+                      ))}
+                    </div>
+                    {!showAll && hiddenCount > 0 && (
                       <button
-                        key={t.id}
                         type="button"
-                        onClick={() => pickTemplate(t.id)}
-                        style={{ ...styles.templateCard, borderLeft: `3px solid ${t.themeHex}` }}
+                        onClick={() => setExpandedCategories((prev) => new Set(prev).add(category))}
+                        style={styles.seeMoreBtn}
                       >
-                        <span style={styles.templateName}>{t.name}</span>
-                        <span style={styles.templateDesc}>{t.description}</span>
-                        <span style={styles.templateCategory}>{t.themeName}</span>
+                        See {hiddenCount} more in {category} ↓
                       </button>
-                    ))}
+                    )}
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
             <aside style={styles.pickChat}>
               <h3 style={styles.chatTitle}>AI site expert</h3>
@@ -640,6 +682,47 @@ const styles = {
   pickTemplates: {
     overflowY: 'auto',
     padding: '1rem 1.5rem 1.5rem',
+  },
+  categoryNavSticky: {
+    position: 'sticky',
+    top: 0,
+    zIndex: 10,
+    background: 'var(--bg)',
+    paddingBottom: '0.75rem',
+    marginBottom: '0.5rem',
+    borderBottom: '1px solid var(--border)',
+  },
+  categoryNavLabel: {
+    fontSize: '0.8rem',
+    color: 'var(--muted)',
+    marginRight: '0.5rem',
+    verticalAlign: 'middle',
+  },
+  categoryNavPills: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '0.35rem',
+    marginTop: '0.5rem',
+  },
+  categoryPill: {
+    padding: '0.35rem 0.65rem',
+    fontSize: '0.8rem',
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: '999px',
+    color: 'var(--text)',
+    cursor: 'pointer',
+  },
+  seeMoreBtn: {
+    marginTop: '0.75rem',
+    padding: '0.5rem 1rem',
+    fontSize: '0.85rem',
+    background: 'transparent',
+    color: 'var(--accent)',
+    border: '1px solid var(--accent)',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontWeight: 500,
   },
   pickChat: {
     borderLeft: '1px solid var(--border)',
