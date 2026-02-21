@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import { templates, getTemplateById, getDefaultContent, searchTemplates, getCategories } from './templates'
 import { generateHtml } from './generateHtml'
@@ -40,17 +40,110 @@ function PermissionModal({ show, siteName, onSiteNameChange, onConfirm, onCancel
   )
 }
 
+const LANDING_HEADLINE = 'Make websites easily'
+const LANDING_TAGLINE = 'Pick a template, edit in your dashboard, and publish live. No code.'
+
 function Landing({ onStart }) {
+  const [phase, setPhase] = useState(0)
+  const [charIndex, setCharIndex] = useState(0)
+  const [showFinal, setShowFinal] = useState(false)
+
+  useEffect(() => {
+    if (showFinal) return
+    const timers = []
+    timers.push(setTimeout(() => setPhase(1), 400))
+    timers.push(setTimeout(() => setPhase(2), 900))
+    timers.push(setTimeout(() => setPhase(3), 1400))
+    return () => timers.forEach(clearTimeout)
+  }, [showFinal])
+
+  useEffect(() => {
+    if (phase !== 3) return
+    if (charIndex >= LANDING_HEADLINE.length) {
+      const t = setTimeout(() => setPhase(4), 300)
+      return () => clearTimeout(t)
+    }
+    const t = setTimeout(() => setCharIndex((i) => i + 1), 80)
+    return () => clearTimeout(t)
+  }, [phase, charIndex])
+
+  useEffect(() => {
+    if (phase < 4) return
+    const timers = []
+    if (phase === 4) timers.push(setTimeout(() => setPhase(5), 600))
+    if (phase === 5) timers.push(setTimeout(() => setPhase(6), 700))
+    if (phase === 6) timers.push(setTimeout(() => setShowFinal(true), 400))
+    return () => timers.forEach(clearTimeout)
+  }, [phase])
+
+  if (showFinal) {
+    return (
+      <main style={styles.landing}>
+        <div style={{ ...styles.landingInner, animation: 'landing-reveal-final 0.5s ease forwards' }}>
+          <h1 style={styles.landingTitle}>{LANDING_HEADLINE}</h1>
+          <p style={styles.landingTagline}>{LANDING_TAGLINE}</p>
+          <button onClick={onStart} style={styles.cta}>
+            Start building
+          </button>
+        </div>
+      </main>
+    )
+  }
+
   return (
     <main style={styles.landing}>
-      <div style={styles.landingInner}>
-        <h1 style={styles.landingTitle}>Make websites easily</h1>
-        <p style={styles.landingTagline}>
-          Pick a template, edit text and colors, preview live — then download your site. No code.
-        </p>
-        <button onClick={onStart} style={styles.cta}>
-          Start building
-        </button>
+      <div style={styles.landingBuildWrap}>
+        <p style={styles.landingBuildLabel}>Building your site...</p>
+        <div style={styles.landingBrowser}>
+          <div style={styles.landingBrowserBar}>
+            <span style={styles.landingBrowserDots}>● ● ●</span>
+            <span style={styles.landingBrowserUrl}>mysite.com</span>
+          </div>
+          <div style={styles.landingBrowserContent}>
+            {phase >= 1 && (
+              <header
+                style={{
+                  ...styles.landingMockNav,
+                  animation: 'landing-slide-down 0.4s ease forwards',
+                }}
+              >
+                <span style={styles.landingMockNavLogo}>Logo</span>
+                <span style={styles.landingMockNavLink}>Home</span>
+                <span style={styles.landingMockNavLink}>About</span>
+              </header>
+            )}
+            {phase >= 2 && (
+              <section
+                style={{
+                  ...styles.landingMockHero,
+                  animation: 'landing-block-in 0.5s ease forwards',
+                }}
+              >
+                {phase >= 3 && (
+                  <h2 style={styles.landingMockTitle}>
+                    {LANDING_HEADLINE.slice(0, charIndex)}
+                    {phase === 3 && charIndex < LANDING_HEADLINE.length && (
+                      <span style={styles.landingCursor}>|</span>
+                    )}
+                  </h2>
+                )}
+                {phase >= 4 && (
+                  <p style={{ ...styles.landingMockTagline, animation: 'landing-fade-in 0.5s ease forwards' }}>
+                    {LANDING_TAGLINE}
+                  </p>
+                )}
+                {phase >= 5 && (
+                  <div style={{ ...styles.landingMockCta, animation: 'landing-cta-pop 0.35s ease forwards' }}>
+                    Get started
+                  </div>
+                )}
+              </section>
+            )}
+          </div>
+        </div>
+        {phase >= 6 && (
+          <p style={styles.landingBuildDone}>Ready. Your turn.</p>
+        )}
       </div>
     </main>
   )
@@ -144,17 +237,6 @@ function Builder({ onBack }) {
     } finally {
       setAiLoading(false)
     }
-  }
-
-  function exportHtml() {
-    const html = generateHtml(templateId, content)
-    const blob = new Blob([html], { type: 'text/html' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'my-site.html'
-    a.click()
-    URL.revokeObjectURL(url)
   }
 
   const previewHtml = templateId ? generateHtml(templateId, content) : ''
@@ -269,9 +351,6 @@ function Builder({ onBack }) {
               Open in dashboard
             </button>
             <p style={styles.dashboardHint}>Save to dashboard to add photos, publish, and manage your live site.</p>
-            <button onClick={exportHtml} style={styles.exportBtn}>
-              Download HTML
-            </button>
           </aside>
           <PermissionModal
             show={showPermissionModal}
@@ -361,6 +440,100 @@ const styles = {
     justifyContent: 'center',
     padding: '2rem',
     background: 'var(--bg)',
+  },
+  landingBuildWrap: {
+    textAlign: 'center',
+    width: '100%',
+    maxWidth: '420px',
+  },
+  landingBuildLabel: {
+    fontSize: '0.85rem',
+    color: 'var(--muted)',
+    marginBottom: '1rem',
+  },
+  landingBrowser: {
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: '12px',
+    overflow: 'hidden',
+    boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+  },
+  landingBrowserBar: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.75rem',
+    padding: '0.5rem 0.75rem',
+    background: '#1a1a20',
+    borderBottom: '1px solid var(--border)',
+  },
+  landingBrowserDots: {
+    fontSize: '0.6rem',
+    color: 'var(--muted)',
+    letterSpacing: '0.2em',
+  },
+  landingBrowserUrl: {
+    flex: 1,
+    fontSize: '0.7rem',
+    color: 'var(--muted)',
+    textAlign: 'center',
+  },
+  landingBrowserContent: {
+    minHeight: '220px',
+    padding: '1.25rem',
+    background: 'var(--bg)',
+  },
+  landingMockNav: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '1rem',
+    marginBottom: '1.25rem',
+    paddingBottom: '0.75rem',
+    borderBottom: '1px solid var(--border)',
+  },
+  landingMockNavLogo: {
+    fontWeight: 700,
+    color: 'var(--accent)',
+    fontSize: '0.9rem',
+  },
+  landingMockNavLink: {
+    fontSize: '0.8rem',
+    color: 'var(--muted)',
+  },
+  landingMockHero: {
+    textAlign: 'center',
+  },
+  landingMockTitle: {
+    fontSize: '1.35rem',
+    fontWeight: 700,
+    marginBottom: '0.5rem',
+    color: 'var(--text)',
+  },
+  landingCursor: {
+    display: 'inline-block',
+    marginLeft: '2px',
+    color: 'var(--accent)',
+    animation: 'landing-blink 0.8s step-end infinite',
+  },
+  landingMockTagline: {
+    fontSize: '0.8rem',
+    color: 'var(--muted)',
+    marginBottom: '0.75rem',
+    lineHeight: 1.5,
+  },
+  landingMockCta: {
+    display: 'inline-block',
+    padding: '0.4rem 0.9rem',
+    background: 'var(--accent)',
+    color: '#fff',
+    borderRadius: '8px',
+    fontSize: '0.85rem',
+    fontWeight: 600,
+  },
+  landingBuildDone: {
+    marginTop: '1rem',
+    fontSize: '0.9rem',
+    color: 'var(--muted)',
+    animation: 'landing-fade-in 0.5s ease forwards',
   },
   landingInner: {
     textAlign: 'center',
@@ -549,15 +722,6 @@ const styles = {
     fontSize: '0.75rem',
     color: 'var(--muted)',
     marginTop: '0.25rem',
-    marginBottom: '0.5rem',
-  },
-  exportBtn: {
-    marginTop: '0.5rem',
-    width: '100%',
-    padding: '0.75rem',
-    background: 'var(--accent)',
-    color: '#fff',
-    fontWeight: 600,
   },
   modalOverlay: {
     position: 'fixed',
