@@ -400,3 +400,18 @@ export function getCategories() {
   const set = new Set(BASE_TEMPLATES.map((t) => t.category))
   return Array.from(set).sort()
 }
+
+/** Templates grouped by category for sectioned display. Each item: { category, templates }. */
+export function getTemplatesByCategory(filterQuery = '') {
+  const q = (filterQuery || '').toLowerCase().trim()
+  const list = q ? searchTemplates(q, '') : templates
+  const byCat = {}
+  for (const t of list) {
+    if (!byCat[t.category]) byCat[t.category] = []
+    byCat[t.category].push(t)
+  }
+  const categories = getCategories()
+  return categories
+    .filter((cat) => byCat[cat]?.length)
+    .map((cat) => ({ category: cat, templates: byCat[cat] }))
+}

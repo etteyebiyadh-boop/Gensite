@@ -1,12 +1,10 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
-import { templates, getTemplateById, getDefaultContent, searchTemplates, getCategories } from './templates'
+import { templates, getTemplateById, getDefaultContent, searchTemplates, getCategories, getTemplatesByCategory } from './templates'
 import { generateHtml } from './generateHtml'
 import { requestAiSite, getQuickSuggestions } from './aiDesigner'
 import { createSite } from './lib/siteApi'
 import Dashboard from './pages/Dashboard'
-
-const TEMPLATES_PER_PAGE = 24
 
 function PermissionModal({ show, siteName, onSiteNameChange, onConfirm, onCancel, loading }) {
   if (!show) return null
@@ -149,7 +147,6 @@ function Landing({ onStart }) {
   )
 }
 
-const categories = getCategories()
 const quickSuggestions = getQuickSuggestions()
 
 function Builder({ onBack }) {
@@ -158,8 +155,6 @@ function Builder({ onBack }) {
   const [templateId, setTemplateId] = useState(null)
   const [content, setContent] = useState({})
   const [searchQuery, setSearchQuery] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState('')
-  const [page, setPage] = useState(1)
   const [aiMessages, setAiMessages] = useState([
     { from: 'ai', text: 'Describe how you want your site to look and feel, or pick one of the suggestions below. We have 1,000 templates across 20 types and 50 color themes.' },
   ])
@@ -168,19 +163,15 @@ function Builder({ onBack }) {
   const [showPermissionModal, setShowPermissionModal] = useState(false)
   const [siteName, setSiteName] = useState('My site')
   const [dashboardCreating, setDashboardCreating] = useState(false)
+  const [aiEditInput, setAiEditInput] = useState('')
+  const [aiEditLoading, setAiEditLoading] = useState(false)
 
   const template = templateId ? getTemplateById(templateId) : null
 
-  const filteredTemplates = useMemo(() => {
-    return searchTemplates(searchQuery, categoryFilter)
-  }, [searchQuery, categoryFilter])
-
-  const totalPages = Math.max(1, Math.ceil(filteredTemplates.length / TEMPLATES_PER_PAGE))
-  const currentPage = Math.min(page, totalPages)
-  const paginatedTemplates = useMemo(() => {
-    const start = (currentPage - 1) * TEMPLATES_PER_PAGE
-    return filteredTemplates.slice(start, start + TEMPLATES_PER_PAGE)
-  }, [filteredTemplates, currentPage])
+  const templatesByCategory = useMemo(
+    () => getTemplatesByCategory(searchQuery),
+    [searchQuery]
+  )
 
   function pickTemplate(id) {
     const t = getTemplateById(id)
@@ -222,6 +213,7 @@ function Builder({ onBack }) {
       setTemplateId(result.templateId)
       setContent(result.content)
       setStep('edit')
+      setSiteName(result.templateId?.split('__')[0] || 'My site')
       setAiMessages((prev) => [
         ...prev,
         {
@@ -236,6 +228,22 @@ function Builder({ onBack }) {
       ])
     } finally {
       setAiLoading(false)
+    }
+  }
+
+  async function handleAiEditApply() {
+    const text = aiEditInput.trim()
+    if (!text || !templateId) return
+    setAiEditLoading(true)
+    try {
+      const result = await requestAiSite(text)
+      setTemplateId(result.templateId)
+      setContent(result.content)
+      setAiEditInput('')
+    } catch (err) {
+      // silent or toast
+    } finally {
+      setAiEditLoading(false)
     }
   }
 
@@ -254,65 +262,80 @@ function Builder({ onBack }) {
 
       {step === 'pick' && (
         <section style={styles.pickSection}>
-          <div style={styles.toolbar}>
-            <input
-              type="search"
-              placeholder="Search 1,000 templates..."
-              value={searchQuery}
-              onChange={(e) => { setSearchQuery(e.target.value); setPage(1) }}
-              style={styles.searchInput}
-            />
-            <select
-              value={categoryFilter}
-              onChange={(e) => { setCategoryFilter(e.target.value); setPage(1) }}
-              style={styles.select}
-            >
-              <option value="">All categories</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
+          <div style={styles.pickLayout}>
+            <div style={styles.pickTemplates}>
+              <div style={styles.toolbar}>
+                <input
+                  type="search"
+                  placeholder="Search templates..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={styles.searchInput}
+                />
+              </div>
+              {templatesByCategory.map(({ category, templates: list }) => (
+                <div key={category} style={styles.categoryBlock}>
+                  <h2 style={styles.categoryTitle}>{category}</h2>
+                  <p style={styles.categoryDetail}>
+                    {list.length} template{list.length !== 1 ? 's' : ''} in this category
+                  </p>
+                  <div style={styles.templateGrid}>
+                    {list.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => pickTemplate(t.id)}
+                        style={{ ...styles.templateCard, borderLeft: `3px solid ${t.themeHex}` }}
+                      >
+                        <span style={styles.templateName}>{t.name}</span>
+                        <span style={styles.templateDesc}>{t.description}</span>
+                        <span style={styles.templateCategory}>{t.themeName}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
-            </select>
-          </div>
-          <p style={styles.resultCount}>
-            Showing {paginatedTemplates.length} of {filteredTemplates.length} templates
-          </p>
-          <div style={styles.templateGrid}>
-            {paginatedTemplates.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => pickTemplate(t.id)}
-                style={{ ...styles.templateCard, borderLeft: `3px solid ${t.themeHex}` }}
-              >
-                <span style={styles.templateName}>{t.name}</span>
-                <span style={styles.templateDesc}>{t.description}</span>
-                <span style={styles.templateCategory}>{t.category}</span>
-              </button>
-            ))}
-          </div>
-          {totalPages > 1 && (
-            <div style={styles.pagination}>
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage <= 1}
-                style={styles.pageBtn}
-              >
-                Previous
-              </button>
-              <span style={styles.pageInfo}>
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage >= totalPages}
-                style={styles.pageBtn}
-              >
-                Next
-              </button>
             </div>
-          )}
+            <aside style={styles.pickChat}>
+              <h3 style={styles.chatTitle}>AI site expert</h3>
+              <p style={styles.chatSubtitle}>Describe your site or pick a template below.</p>
+              <div style={styles.chatMessages}>
+                {aiMessages.map((m, index) => (
+                  <div
+                    key={index}
+                    style={m.from === 'ai' ? styles.chatBubbleAi : styles.chatBubbleUser}
+                  >
+                    {m.text}
+                  </div>
+                ))}
+              </div>
+              <div style={styles.quickSuggestions}>
+                {quickSuggestions.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    style={styles.quickChip}
+                    onClick={() => setAiInput(s)}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+              <form onSubmit={handleAiSend} style={styles.chatForm}>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Landing page for my SaaS, blue theme..."
+                  value={aiInput}
+                  onChange={(e) => setAiInput(e.target.value)}
+                  style={styles.chatInput}
+                  disabled={aiLoading}
+                />
+                <button type="submit" style={styles.chatBtn} disabled={aiLoading}>
+                  {aiLoading ? 'Thinking...' : 'Generate layout'}
+                </button>
+              </form>
+            </aside>
+          </div>
         </section>
       )}
 
@@ -347,6 +370,26 @@ function Builder({ onBack }) {
                 )}
               </label>
             ))}
+            <div style={styles.aiGeneratorBlock}>
+              <h3 style={styles.aiGeneratorTitle}>AI content generator</h3>
+              <p style={styles.aiGeneratorHint}>Refine or regenerate content for this page.</p>
+              <textarea
+                rows={2}
+                placeholder="e.g. Make it more professional, add a startup vibe..."
+                value={aiEditInput}
+                onChange={(e) => setAiEditInput(e.target.value)}
+                style={styles.aiGeneratorInput}
+                disabled={aiEditLoading}
+              />
+              <button
+                type="button"
+                onClick={handleAiEditApply}
+                disabled={aiEditLoading || !aiEditInput.trim()}
+                style={styles.aiGeneratorBtn}
+              >
+                {aiEditLoading ? 'Applying...' : 'Apply to this page'}
+              </button>
+            </div>
             <button onClick={() => setShowPermissionModal(true)} style={styles.dashboardBtn}>
               Open in dashboard
             </button>
@@ -582,35 +625,55 @@ const styles = {
   },
   pickSection: {
     flex: 1,
-    overflow: 'auto',
-    padding: '0 1.5rem 1.5rem',
-    maxWidth: '64rem',
-    margin: '0 auto',
-    width: '100%',
-  },
-  toolbar: {
+    overflow: 'hidden',
     display: 'flex',
-    gap: '0.75rem',
-    marginBottom: '0.75rem',
-    flexWrap: 'wrap',
+    flexDirection: 'column',
   },
-  searchInput: {
-    flex: '1 1 200px',
-    minWidth: '180px',
-    padding: '0.5rem 0.75rem',
+  pickLayout: {
+    flex: 1,
+    display: 'grid',
+    gridTemplateColumns: '1fr 340px',
+    gap: 0,
+    minHeight: 0,
+    overflow: 'hidden',
   },
-  select: {
-    padding: '0.5rem 0.75rem',
-    minWidth: '140px',
+  pickTemplates: {
+    overflowY: 'auto',
+    padding: '1rem 1.5rem 1.5rem',
   },
-  resultCount: {
+  pickChat: {
+    borderLeft: '1px solid var(--border)',
+    background: 'var(--surface)',
+    display: 'flex',
+    flexDirection: 'column',
+    minHeight: 0,
+    padding: '1rem',
+  },
+  categoryBlock: {
+    marginBottom: '2rem',
+  },
+  categoryTitle: {
+    fontSize: '1.5rem',
+    fontWeight: 700,
+    marginBottom: '0.25rem',
+    color: 'var(--text)',
+  },
+  categoryDetail: {
     fontSize: '0.8rem',
     color: 'var(--muted)',
-    marginBottom: '0.5rem',
+    marginBottom: '0.75rem',
+  },
+  toolbar: {
+    marginBottom: '1rem',
+  },
+  searchInput: {
+    width: '100%',
+    maxWidth: '320px',
+    padding: '0.5rem 0.75rem',
   },
   templateGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
     gap: '0.75rem',
   },
   templateCard: {
@@ -641,23 +704,10 @@ const styles = {
     textTransform: 'uppercase',
     letterSpacing: '0.03em',
   },
-  pagination: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '1rem',
-    marginTop: '1rem',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-  },
-  pageBtn: {
-    padding: '0.4rem 0.75rem',
-    background: 'var(--surface)',
-    color: 'var(--text)',
-    border: '1px solid var(--border)',
-  },
-  pageInfo: {
-    fontSize: '0.875rem',
+  chatSubtitle: {
+    fontSize: '0.8rem',
     color: 'var(--muted)',
+    marginBottom: '0.5rem',
   },
   quickSuggestions: {
     display: 'flex',
@@ -722,6 +772,39 @@ const styles = {
     fontSize: '0.75rem',
     color: 'var(--muted)',
     marginTop: '0.25rem',
+  },
+  aiGeneratorBlock: {
+    marginTop: '1rem',
+    paddingTop: '1rem',
+    borderTop: '1px solid var(--border)',
+  },
+  aiGeneratorTitle: {
+    fontSize: '0.95rem',
+    fontWeight: 600,
+    marginBottom: '0.25rem',
+  },
+  aiGeneratorHint: {
+    fontSize: '0.75rem',
+    color: 'var(--muted)',
+    marginBottom: '0.5rem',
+  },
+  aiGeneratorInput: {
+    width: '100%',
+    padding: '0.5rem 0.75rem',
+    marginBottom: '0.5rem',
+    resize: 'vertical',
+    minHeight: '60px',
+  },
+  aiGeneratorBtn: {
+    width: '100%',
+    padding: '0.5rem',
+    fontSize: '0.9rem',
+    background: 'var(--surface)',
+    color: 'var(--accent)',
+    border: '1px solid var(--accent)',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontWeight: 600,
   },
   modalOverlay: {
     position: 'fixed',
