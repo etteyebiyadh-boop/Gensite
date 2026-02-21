@@ -1,0 +1,25 @@
+---
+description: Python conventions when editing .py files
+globs: "**/*.py"
+alwaysApply: false
+---
+
+# Python
+
+- Follow **PEP 8**: 4-space indent, snake_case, two blank lines between top-level definitions.
+- Use **type hints** for function parameters and return values where they add clarity.
+
+```python
+# ✅ GOOD
+def get_user(user_id: int) -> User | None:
+    ...
+
+# ❌ BAD – silent broad catch
+try:
+    do_thing()
+except: pass
+```
+
+- **Errors**: Prefer specific exceptions; log or re-raise with context; avoid bare `except:`.
+- Use **pathlib** for paths, **venv** for project isolation. Run tests with `pytest` when present.
+- Match existing style: docstrings (Google/NumPy/Sphinx), async if the codebase uses it, same test layout.
