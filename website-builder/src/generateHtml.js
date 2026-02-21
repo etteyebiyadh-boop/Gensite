@@ -71,6 +71,35 @@ export function generateHtml(templateId, content) {
 </body>
 </html>`
 
+  // Services list + CTA (medical, legal, beauty, spa)
+  const servicesWithCtaLayout = (name, tagline, item1, item2, ctaText) => `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${escapeHtml(name || 'Services')}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui,sans-serif; background: #0f0f12; color: #e8e8ed; padding: 2rem; }
+    .container { max-width: 42rem; margin: 0 auto; text-align: center; }
+    h1 { font-size: 2rem; margin-bottom: 0.25rem; }
+    .tagline { color: #8888a0; margin-bottom: 1.5rem; }
+    .item { background: #1a1a20; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 0.75rem; border-left: 4px solid ${color}; text-align: left; }
+    .item strong { color: ${color}; }
+    a { display: inline-block; margin-top: 1rem; background: ${color}; color: #fff; padding: 0.75rem 1.5rem; border-radius: 10px; text-decoration: none; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>${escapeHtml(name || '')}</h1>
+    <p class="tagline">${escapeHtml(tagline || '')}</p>
+    <div class="item"><strong>${escapeHtml(item1 || '')}</strong></div>
+    <div class="item"><strong>${escapeHtml(item2 || '')}</strong></div>
+    <a href="#">${escapeHtml(ctaText || 'Book now')}</a>
+  </div>
+</body>
+</html>`
+
   // Simple: title + body
   const simpleLayout = (title, body) => `<!DOCTYPE html>
 <html lang="en">
@@ -254,6 +283,34 @@ export function generateHtml(templateId, content) {
       return resumeLayout()
     case 'card':
       return cardLayout()
+    case 'realestate':
+    case 'hotel':
+    case 'travel':
+    case 'petcare':
+    case 'cleaning':
+    case 'handyman':
+    case 'moving':
+    case 'insurance':
+    case 'cafe':
+    case 'dental':
+    case 'childcare':
+    case 'coaching':
+    case 'localstore':
+    case 'contact':
+      return heroLayout(c.name || c.title, c.tagline, c.cta)
+    case 'education':
+    case 'podcast':
+    case 'pricing':
+      return heroLayout(c.title, c.tagline, c.cta)
+    case 'medical':
+    case 'legal':
+    case 'beauty':
+    case 'spa':
+      return servicesWithCtaLayout(c.name, c.tagline, c.service1, c.service2, c.cta)
+    case 'bakery':
+      return restaurantLayout()
+    case 'team':
+      return portfolioLayout(c.name, c.tagline, c.service1, c.service2)
     default:
       return simpleLayout(c.title, c.body)
   }

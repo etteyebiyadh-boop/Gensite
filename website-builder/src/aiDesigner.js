@@ -10,6 +10,54 @@ import {
 
 // Keyword → base template id (order matters: more specific first)
 const KEYWORD_TO_BASE = [
+  ['real estate', 'realestate'],
+  ['realestate', 'realestate'],
+  ['property', 'realestate'],
+  ['medical', 'medical'],
+  ['clinic', 'medical'],
+  ['doctor', 'medical'],
+  ['health', 'medical'],
+  ['legal', 'legal'],
+  ['lawyer', 'legal'],
+  ['law firm', 'legal'],
+  ['education', 'education'],
+  ['course', 'education'],
+  ['school', 'education'],
+  ['beauty', 'beauty'],
+  ['salon', 'beauty'],
+  ['hair', 'beauty'],
+  ['hotel', 'hotel'],
+  ['accommodation', 'hotel'],
+  ['travel', 'travel'],
+  ['tour', 'travel'],
+  ['pet', 'petcare'],
+  ['vet', 'petcare'],
+  ['pet care', 'petcare'],
+  ['cleaning', 'cleaning'],
+  ['handyman', 'handyman'],
+  ['plumber', 'handyman'],
+  ['repair', 'handyman'],
+  ['moving', 'moving'],
+  ['movers', 'moving'],
+  ['insurance', 'insurance'],
+  ['podcast', 'podcast'],
+  ['cafe', 'cafe'],
+  ['coffee', 'cafe'],
+  ['bakery', 'bakery'],
+  ['spa', 'spa'],
+  ['wellness', 'spa'],
+  ['dental', 'dental'],
+  ['dentist', 'dental'],
+  ['childcare', 'childcare'],
+  ['kindergarten', 'childcare'],
+  ['coaching', 'coaching'],
+  ['life coach', 'coaching'],
+  ['store', 'localstore'],
+  ['shop', 'localstore'],
+  ['pricing', 'pricing'],
+  ['contact', 'contact'],
+  ['team', 'team'],
+  ['about us', 'team'],
   ['wedding', 'wedding'],
   ['restaurant', 'restaurant'],
   ['menu', 'restaurant'],
@@ -51,7 +99,6 @@ const KEYWORD_TO_BASE = [
   ['download', 'app'],
   ['product', 'product'],
   ['buy', 'product'],
-  ['shop', 'product'],
   ['ecommerce', 'product'],
   ['coming soon', 'coming-soon'],
   ['notify', 'coming-soon'],
@@ -64,7 +111,6 @@ const KEYWORD_TO_BASE = [
   ['designer', 'portfolio'],
   ['developer', 'portfolio'],
   ['landing', 'landing'],
-  ['product', 'landing'],
   ['hero', 'landing'],
   ['cta', 'landing'],
   ['minimal', 'minimal'],
@@ -169,6 +215,42 @@ function fillContentFromPrompt(baseId, content, trimmed) {
       c.name = trimmed.length > 25 ? trimmed.slice(0, 22) + '...' : trimmed
       c.tagline = c.tagline || 'Let\'s connect.'
       break
+    case 'realestate':
+    case 'hotel':
+    case 'travel':
+    case 'petcare':
+    case 'cleaning':
+    case 'handyman':
+    case 'moving':
+    case 'insurance':
+    case 'cafe':
+    case 'dental':
+    case 'childcare':
+    case 'coaching':
+    case 'localstore':
+    case 'contact':
+      c.name = trimmed.length > 40 ? trimmed.slice(0, 37) + '...' : trimmed
+      c.tagline = c.tagline || 'Just add your details.'
+      break
+    case 'education':
+    case 'podcast':
+    case 'pricing':
+      c.title = trimmed.length > 60 ? trimmed.slice(0, 57) + '...' : trimmed
+      c.tagline = c.tagline || 'Customize below.'
+      break
+    case 'medical':
+    case 'legal':
+    case 'beauty':
+    case 'spa':
+      c.name = trimmed.length > 40 ? trimmed.slice(0, 37) + '...' : trimmed
+      c.tagline = c.tagline || 'List your services in the form.'
+      break
+    case 'bakery':
+      c.name = trimmed.length > 30 ? trimmed.slice(0, 27) + '...' : trimmed
+      break
+    case 'team':
+      c.name = trimmed.length > 40 ? trimmed.slice(0, 37) + '...' : trimmed
+      break
     default:
       c.title = trimmed.length > 60 ? trimmed.slice(0, 57) + '...' : trimmed
   }
@@ -201,8 +283,31 @@ export function getSuggestion(baseId, prompt) {
     wedding: 'Save-the-date style. Update names and date.',
     nonprofit: 'Mission and donate CTA. Customize the message.',
     card: 'Link-in-bio or business card. Name, role, and one line.',
+    realestate: 'Ready-made — just add your agency name and contact.',
+    medical: 'Ready-made — add your clinic name and services.',
+    legal: 'Ready-made — add your firm name and practice areas.',
+    education: 'Ready-made — add your course or school name.',
+    beauty: 'Ready-made — add your salon name and services.',
+    hotel: 'Ready-made — add your hotel name and book CTA.',
+    travel: 'Ready-made — add your agency name.',
+    petcare: 'Ready-made — add your business name.',
+    cleaning: 'Ready-made — add your company name.',
+    handyman: 'Ready-made — add your business name.',
+    moving: 'Ready-made — add your company name.',
+    insurance: 'Ready-made — add your agency name.',
+    podcast: 'Ready-made — add your show name.',
+    cafe: 'Ready-made — add your cafe name.',
+    bakery: 'Ready-made — add your bakery and specialties.',
+    spa: 'Ready-made — add your spa name and services.',
+    dental: 'Ready-made — add your clinic name.',
+    childcare: 'Ready-made — add your centre name.',
+    coaching: 'Ready-made — add your name and offer.',
+    localstore: 'Ready-made — add your store name.',
+    pricing: 'Ready-made — add your product and price.',
+    contact: 'Ready-made — add your business name.',
+    team: 'Ready-made — add your company and team members.',
   }
-  const tip = tips[baseId] || tips.landing
+  const tip = tips[baseId] || 'Ready-made template — just replace with your details.'
   if (lower.includes('color') || lower.includes('theme')) {
     return `${tip} Try picking another template from the grid to get a different color theme — we have 50 themes.`
   }
