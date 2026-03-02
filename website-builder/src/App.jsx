@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
-import { templates, getTemplateById, getDefaultContent, searchTemplates, getCategories, getTemplatesByCategory } from './templates'
-import { generateHtml } from './generateHtml'
 import { requestAiSite, getQuickSuggestions } from './aiDesigner'
+import { getTemplateById, getDefaultContent, getTemplatesByCategory } from './templates'
+import { generateHtml } from './generateHtml'
 import { createSite, supabase } from './lib/siteApi'
 import Dashboard from './pages/Dashboard'
 import AuthModal from './components/AuthModal'
+import Wizard from './components/Wizard'
 
 function PermissionModal({ show, siteName, onSiteNameChange, onConfirm, onCancel, loading }) {
   if (!show) return null
@@ -150,9 +151,9 @@ function Landing({ onStart }) {
 
 const quickSuggestions = getQuickSuggestions()
 
-function Builder({ onBack }) {
+function Builder({ onBack, initialSetup }) {
   const navigate = useNavigate()
-  const [step, setStep] = useState('pick') // 'pick' | 'edit'
+  const [step, setStep] = useState(initialSetup ? 'edit' : 'pick') // 'pick' | 'edit'
   const [templateId, setTemplateId] = useState(null)
   const [content, setContent] = useState({})
   const [searchQuery, setSearchQuery] = useState('')
@@ -179,6 +180,32 @@ function Builder({ onBack }) {
     () => getTemplatesByCategory(searchQuery),
     [searchQuery]
   )
+
+  useEffect(() => {
+    if (initialSetup && !templateId && step === 'edit') {
+      const runAi = async () => {
+        setAiLoading(true)
+        const prompt = `A ${initialSetup.vibe?.replace('-', ' ')} website for a ${initialSetup.siteType} named ${initialSetup.siteName}`
+        try {
+          const result = await requestAiSite(prompt)
+          setTemplateId(result.templateId)
+          setContent(result.content)
+          setSiteName(initialSetup.siteName || result.templateId?.split('__')[0] || 'My site')
+          setAiMessages([
+            { from: 'ai', text: 'Describe how you want your site to look and feel...' },
+            { from: 'user', text: `Build me a ${initialSetup.vibe} site for a ${initialSetup.siteType} called ${initialSetup.siteName}.` },
+            { from: 'ai', text: result.suggestion || 'I generated a custom layout based on your answers! You can edit any section on the left.' }
+          ])
+        } catch (e) {
+          setAiMessages([{ from: 'ai', text: 'Oops! Something went wrong loading your setup. Please try searching or describing what you need.' }])
+          setStep('pick')
+        } finally {
+          setAiLoading(false)
+        }
+      }
+      runAi()
+    }
+  }, [initialSetup, templateId, step])
 
   function scrollToCategory(cat) {
     const el = categoryRefs.current[cat]
@@ -280,7 +307,7 @@ function Builder({ onBack }) {
         </span>
       </header>
 
-      {step === 'pick' && (
+      {step === 'pick' && !aiLoading && (
         <section style={styles.pickSection}>
           <div style={styles.pickLayout}>
             <div style={styles.pickTemplates}>
@@ -392,7 +419,7 @@ function Builder({ onBack }) {
         </section>
       )}
 
-      {step === 'edit' && template && (
+      {step === 'edit' && !aiLoading && template && (
         <div style={styles.editLayout}>
           <aside style={styles.sidebar}>
             <h3 style={styles.sidebarTitle}>Edit content</h3>
@@ -549,7 +576,8 @@ function Builder({ onBack }) {
 }
 
 export default function App() {
-  const [screen, setScreen] = useState('landing') // 'landing' | 'builder'
+  const [screen, setScreen] = useState('landing') // 'landing' | 'wizard' | 'builder'
+  const [wizardData, setWizardData] = useState(null)
 
   return (
     <Routes>
@@ -558,8 +586,17 @@ export default function App() {
         path="/*"
         element={
           <>
-            {screen === 'landing' && <Landing onStart={() => setScreen('builder')} />}
-            {screen === 'builder' && <Builder onBack={() => setScreen('landing')} />}
+            {screen === 'landing' && <Landing onStart={() => setScreen('wizard')} />}
+            {screen === 'wizard' && (
+              <Wizard
+                onCancel={() => setScreen('landing')}
+                onComplete={(data) => {
+                  setWizardData(data)
+                  setScreen('builder')
+                }}
+              />
+            )}
+            {screen === 'builder' && <Builder onBack={() => setScreen('landing')} initialSetup={wizardData} />}
           </>
         }
       />

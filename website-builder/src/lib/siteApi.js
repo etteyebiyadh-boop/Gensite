@@ -27,7 +27,19 @@ function generateId() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`
 }
 
+// ============================================
+// SITE MANAGEMENT
+// ============================================
+
 export async function createSite({ name, templateId, content }) {
+  // Check usage limits before creating
+  const limits = await getUserLimits()
+  const currentSites = await getUserSites()
+
+  if (currentSites.length >= limits.siteLimit && limits.siteLimit !== -1) {
+    throw new Error(`You've reached your site limit (${limits.siteLimit}). Upgrade your plan to create more sites.`)
+  }
+
   if (supabase) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('You must be logged in to create a site.')
@@ -45,6 +57,9 @@ export async function createSite({ name, templateId, content }) {
       .single()
 
     if (error) throw new Error(error.message)
+
+    // Track usage
+    await trackUsage(user.id, data.id, 'sites_created', 1)
     return data
   }
 
