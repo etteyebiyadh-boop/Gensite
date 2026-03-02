@@ -12,6 +12,8 @@ import {
   supabase
 } from '../lib/siteApi'
 import './Dashboard.css'
+import Pricing from '../components/Pricing'
+import UsageStats from '../components/UsageStats'
 
 const DEBOUNCE_MS = 800
 const DEVICE_MODES = ['desktop', 'tablet', 'mobile']
@@ -23,6 +25,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [showPricing, setShowPricing] = useState(false)
   const [lastSaved, setLastSaved] = useState(null)
   const [publishLoading, setPublishLoading] = useState(false)
   const [name, setName] = useState('')
@@ -260,15 +263,26 @@ export default function Dashboard() {
             </button>
           )}
           {isBackendConnected() && (
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="dashboard-btn-unpublish"
-              style={{ marginLeft: '0.5rem' }}
-              title="Sign out"
-            >
-              Sign out
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => setShowPricing(true)}
+                className="dashboard-btn-unpublish"
+                style={{ marginLeft: '0.5rem', background: 'var(--accent, #6366f1)', color: '#fff', border: 'none' }}
+                title="View Plans"
+              >
+                Upgrade
+              </button>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="dashboard-btn-unpublish"
+                style={{ marginLeft: '0.5rem' }}
+                title="Sign out"
+              >
+                Sign out
+              </button>
+            </>
           )}
         </div>
       </header>
@@ -381,17 +395,18 @@ export default function Dashboard() {
         {/* Preview area with device frame */}
         <section className="dashboard-preview-wrap">
           <div className="dashboard-preview-frame">
-            <div className={`dashboard-device-frame ${deviceMode}`}>
+            <div className="dashboard-content-iframe">
               <iframe
-                title="Preview"
+                title="Site Preview"
                 srcDoc={previewHtml}
-                className="dashboard-preview-iframe"
-                sandbox="allow-same-origin"
+                sandbox="allow-scripts allow-same-origin"
               />
             </div>
           </div>
         </section>
       </div>
+
+      <Pricing show={showPricing} onClose={() => setShowPricing(false)} />
     </div>
   )
 }

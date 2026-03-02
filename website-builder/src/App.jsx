@@ -7,6 +7,7 @@ import { createSite, supabase } from './lib/siteApi'
 import Dashboard from './pages/Dashboard'
 import AuthModal from './components/AuthModal'
 import Wizard from './components/Wizard'
+import Pricing from './components/Pricing'
 
 function PermissionModal({ show, siteName, onSiteNameChange, onConfirm, onCancel, loading }) {
   if (!show) return null
@@ -40,10 +41,10 @@ function PermissionModal({ show, siteName, onSiteNameChange, onConfirm, onCancel
   )
 }
 
-const LANDING_HEADLINE = 'Make websites easily'
-const LANDING_TAGLINE = 'Pick a template, edit in your dashboard, and publish live. No code.'
+const LANDING_HEADLINE = 'Professional Websites, Made Easy'
+const LANDING_TAGLINE = 'AI-powered website builder with custom domains, analytics, and team collaboration. Create stunning sites in minutes.'
 
-function Landing({ onStart }) {
+function Landing({ onStart, onPricing }) {
   const [phase, setPhase] = useState(0)
   const [charIndex, setCharIndex] = useState(0)
   const [showFinal, setShowFinal] = useState(false)
@@ -82,9 +83,20 @@ function Landing({ onStart }) {
         <div style={{ ...styles.landingInner, animation: 'landing-reveal-final 0.5s ease forwards' }}>
           <h1 style={styles.landingTitle}>{LANDING_HEADLINE}</h1>
           <p style={styles.landingTagline}>{LANDING_TAGLINE}</p>
-          <button onClick={onStart} style={styles.cta}>
-            Start building
-          </button>
+          <div style={styles.ctaRow}>
+            <button onClick={onStart} style={styles.cta}>
+              Start building — Free
+            </button>
+            <button onClick={onPricing} style={styles.ctaSecondary}>
+              View Pricing
+            </button>
+          </div>
+          <div style={styles.features}>
+            <div style={styles.feature}><span>🎨</span> 50+ Templates</div>
+            <div style={styles.feature}><span>🤖</span> AI Design</div>
+            <div style={styles.feature}><span>🚀</span> Instant Publish</div>
+            <div style={styles.feature}><span>📊</span> Analytics</div>
+          </div>
         </div>
       </main>
     )
@@ -578,29 +590,33 @@ function Builder({ onBack, initialSetup }) {
 export default function App() {
   const [screen, setScreen] = useState('landing') // 'landing' | 'wizard' | 'builder'
   const [wizardData, setWizardData] = useState(null)
+  const [showPricing, setShowPricing] = useState(false)
 
   return (
-    <Routes>
-      <Route path="/site/:id" element={<Dashboard />} />
-      <Route
-        path="/*"
-        element={
-          <>
-            {screen === 'landing' && <Landing onStart={() => setScreen('wizard')} />}
-            {screen === 'wizard' && (
-              <Wizard
-                onCancel={() => setScreen('landing')}
-                onComplete={(data) => {
-                  setWizardData(data)
-                  setScreen('builder')
-                }}
-              />
-            )}
-            {screen === 'builder' && <Builder onBack={() => setScreen('landing')} initialSetup={wizardData} />}
-          </>
-        }
-      />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/site/:id" element={<Dashboard />} />
+        <Route
+          path="/*"
+          element={
+            <>
+              {screen === 'landing' && <Landing onStart={() => setScreen('wizard')} onPricing={() => setShowPricing(true)} />}
+              {screen === 'wizard' && (
+                <Wizard
+                  onCancel={() => setScreen('landing')}
+                  onComplete={(data) => {
+                    setWizardData(data)
+                    setScreen('builder')
+                  }}
+                />
+              )}
+              {screen === 'builder' && <Builder onBack={() => setScreen('landing')} initialSetup={wizardData} />}
+            </>
+          }
+        />
+      </Routes>
+      <Pricing show={showPricing} onClose={() => setShowPricing(false)} />
+    </>
   )
 }
 
@@ -738,6 +754,37 @@ const styles = {
     fontWeight: 600,
     fontSize: '1rem',
     boxShadow: '0 0 20px rgba(99,102,241,0.2)',
+    border: 'none',
+    cursor: 'pointer',
+  },
+  ctaRow: {
+    display: 'flex',
+    gap: '1rem',
+    justifyContent: 'center',
+    marginBottom: '2rem',
+  },
+  ctaSecondary: {
+    background: 'transparent',
+    color: 'var(--text)',
+    padding: '0.875rem 1.75rem',
+    borderRadius: '12px',
+    fontWeight: 600,
+    fontSize: '1rem',
+    border: '1px solid var(--border)',
+    cursor: 'pointer',
+  },
+  features: {
+    display: 'flex',
+    gap: '1.5rem',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+  },
+  feature: {
+    fontSize: '0.85rem',
+    color: 'var(--muted)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.35rem',
   },
   builder: {
     minHeight: '100vh',
