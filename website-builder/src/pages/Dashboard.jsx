@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getTemplateById, getDefaultContent } from '../templates'
+import { getTemplateById } from '../templates'
 import { generateHtml } from '../generateHtml'
 import {
   getSite,
@@ -9,9 +9,12 @@ import {
   unpublishSite,
   getLiveSiteUrl,
   isBackendConnected,
+  supabase
 } from '../lib/siteApi'
+import './Dashboard.css'
 
 const DEBOUNCE_MS = 800
+const DEVICE_MODES = ['desktop', 'tablet', 'mobile']
 
 export default function Dashboard() {
   const { id } = useParams()
@@ -20,9 +23,11 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [lastSaved, setLastSaved] = useState(null)
   const [publishLoading, setPublishLoading] = useState(false)
   const [name, setName] = useState('')
   const [content, setContent] = useState({})
+  const [deviceMode, setDeviceMode] = useState('desktop')
 
   const template = site ? getTemplateById(site.template_id) : null
 
@@ -54,8 +59,9 @@ export default function Dashboard() {
       updateSite(id, { content: nextContent })
         .then((updated) => {
           setSite(updated)
+          setLastSaved(Date.now())
         })
-        .catch(() => {})
+        .catch(() => { })
         .finally(() => setSaving(false))
     },
     [id, site]
@@ -74,7 +80,10 @@ export default function Dashboard() {
     if (!id || name === (site?.name ?? '')) return
     setSaving(true)
     updateSite(id, { name })
-      .then((updated) => setSite(updated))
+      .then((updated) => {
+        setSite(updated)
+        setLastSaved(Date.now())
+      })
       .finally(() => setSaving(false))
   }
 
@@ -107,21 +116,42 @@ export default function Dashboard() {
       .finally(() => setPublishLoading(false))
   }
 
+  const handleSignOut = async () => {
+    if (supabase) {
+      await supabase.auth.signOut()
+      navigate('/')
+    }
+  }
+
   const liveUrl = site?.status === 'published' ? getLiveSiteUrl(id) : null
+
+  const getFieldIcon = (type) => {
+    if (type === 'image') return '🖼'
+    if (type === 'color') return '🎨'
+    if (type === 'textarea') return '📝'
+    return '✏'
+  }
+
+  const getSaveStatusText = () => {
+    if (saving) return 'Saving…'
+    if (lastSaved) return 'Saved'
+    return ''
+  }
 
   if (loading) {
     return (
-      <div style={styles.wrapper}>
-        <div style={styles.loading}>Loading your site…</div>
+      <div className="dashboard-loading">
+        <div className="dashboard-loading-spinner" />
+        <span className="dashboard-loading-text">Loading your site…</span>
       </div>
     )
   }
 
   if (error && !site) {
     return (
-      <div style={styles.wrapper}>
-        <div style={styles.error}>{error}</div>
-        <button type="button" onClick={() => navigate('/')} style={styles.backBtn}>
+      <div className="dashboard-error">
+        <p className="dashboard-error-text">{error}</p>
+        <button type="button" onClick={() => navigate('/')} className="dashboard-error-btn">
           ← Back home
         </button>
       </div>
@@ -130,9 +160,9 @@ export default function Dashboard() {
 
   if (!site || !template) {
     return (
-      <div style={styles.wrapper}>
-        <div style={styles.error}>Site not found</div>
-        <button type="button" onClick={() => navigate('/')} style={styles.backBtn}>
+      <div className="dashboard-error">
+        <p className="dashboard-error-text">Site not found</p>
+        <button type="button" onClick={() => navigate('/')} className="dashboard-error-btn">
           ← Back home
         </button>
       </div>
@@ -142,343 +172,226 @@ export default function Dashboard() {
   const previewHtml = generateHtml(site.template_id, content)
 
   return (
-    <div style={styles.wrapper}>
-      <header style={styles.header}>
-        <button type="button" onClick={() => navigate('/')} style={styles.backBtn}>
-          ← Back
-        </button>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onBlur={handleNameBlur}
-          style={styles.siteNameInput}
-          placeholder="Site name"
-        />
-        {saving && <span style={styles.saving}>Saving…</span>}
-      </header>
-
-      {!isBackendConnected() && (
-        <div style={styles.banner}>
-          Using local storage. Set up Supabase and deploy to get a live URL and sync across devices.
+    <div className="dashboard">
+      {/* Top bar — Wix/Squarespace style */}
+      <header className="dashboard-topbar">
+        <div className="dashboard-topbar-left">
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            style={{ background: 'none', border: 'none', padding: '0.25rem', cursor: 'pointer', color: 'var(--dash-muted)', fontSize: '1.25rem' }}
+            title="Back to templates"
+          >
+            ←
+          </button>
+          <a href="/" className="dashboard-logo">
+            <div className="dashboard-logo-icon" />
+            <span>Site Builder</span>
+          </a>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={handleNameBlur}
+            className="dashboard-site-name"
+            placeholder="Site name"
+          />
+          <span className={`dashboard-save-status ${saving ? 'saving' : lastSaved ? 'saved' : ''}`}>
+            {getSaveStatusText()}
+          </span>
         </div>
-      )}
 
-      <div style={styles.statusBar}>
-        <span style={styles.statusLabel}>Status:</span>
-        <span
-          style={{
-            ...styles.badge,
-            ...(site.status === 'published' ? styles.badgePublished : styles.badgeDraft),
-          }}
-        >
-          {site.status === 'published' ? 'Published' : 'Draft'}
-        </span>
-        {liveUrl && (
-          <>
-            <a href={liveUrl} target="_blank" rel="noopener noreferrer" style={styles.liveLink}>
-              Open live site →
-            </a>
+        <div className="dashboard-device-toggle">
+          {DEVICE_MODES.map((mode) => (
             <button
+              key={mode}
               type="button"
-              onClick={() => window.open(liveUrl)}
-              style={styles.smallBtn}
+              className={`dashboard-device-btn ${deviceMode === mode ? 'active' : ''}`}
+              onClick={() => setDeviceMode(mode)}
+              title={mode.charAt(0).toUpperCase() + mode.slice(1)}
             >
-              Open in new tab
-            </button>
-          </>
-        )}
-      </div>
-
-      <div style={styles.layout}>
-        <aside style={styles.sidebar}>
-          <h3 style={styles.sidebarTitle}>Content & media</h3>
-          <p style={styles.sidebarHint}>Edit below; changes are saved automatically.</p>
-          {template.fields.map((f) => (
-            <label key={f.key} style={styles.field}>
-              <span>{f.label}</span>
-              {f.type === 'color' ? (
-                <input
-                  type="color"
-                  value={content[f.key] ?? f.default ?? ''}
-                  onChange={(e) => updateField(f.key, e.target.value)}
-                  style={styles.colorInput}
-                />
-              ) : f.type === 'image' ? (
-                <div style={styles.imageField}>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleImageChange(f.key, e.target.files?.[0])}
-                    style={styles.fileInput}
-                  />
-                  {(content[f.key] ?? f.default) && (
-                    <img
-                      src={content[f.key] || f.default}
-                      alt=""
-                      style={styles.imagePreview}
-                    />
-                  )}
-                </div>
-              ) : f.type === 'textarea' ? (
-                <textarea
-                  value={content[f.key] ?? ''}
-                  onChange={(e) => updateField(f.key, e.target.value)}
-                  rows={3}
-                  style={styles.input}
-                />
+              {mode === 'desktop' ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="2" y="3" width="20" height="14" rx="2" />
+                  <line x1="8" y1="21" x2="16" y2="21" />
+                  <line x1="12" y1="17" x2="12" y2="21" />
+                </svg>
+              ) : mode === 'tablet' ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="4" y="2" width="16" height="20" rx="2" />
+                  <line x1="12" y1="18" x2="12" y2="18" />
+                </svg>
               ) : (
-                <input
-                  type="text"
-                  value={content[f.key] ?? ''}
-                  onChange={(e) => updateField(f.key, e.target.value)}
-                  style={styles.input}
-                />
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="5" y="2" width="14" height="20" rx="2" />
+                  <line x1="12" y1="18" x2="12" y2="18" />
+                </svg>
               )}
-            </label>
+            </button>
           ))}
+        </div>
 
-          <div style={styles.publishBlock}>
-            {site.status === 'published' ? (
+        <div className="dashboard-topbar-right">
+          <span className={`dashboard-status-badge ${site.status === 'published' ? 'published' : 'draft'}`}>
+            {site.status === 'published' ? '● Live' : '○ Draft'}
+          </span>
+          {site.status === 'published' ? (
+            <>
+              <a href={liveUrl} target="_blank" rel="noopener noreferrer" className="dashboard-btn-view">
+                View site ↗
+              </a>
               <button
                 type="button"
                 onClick={handleUnpublish}
                 disabled={publishLoading}
-                style={styles.unpublishBtn}
+                className="dashboard-btn-unpublish"
               >
                 {publishLoading ? '…' : 'Unpublish'}
               </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handlePublish}
-                disabled={publishLoading}
-                style={styles.publishBtn}
-              >
-                {publishLoading ? 'Publishing…' : 'Publish'}
-              </button>
-            )}
-            <p style={styles.publishHint}>
-              {site.status === 'published'
-                ? 'Your site is live. Unpublish to hide it.'
-                : 'Publish to make your site live at a public URL.'}
-            </p>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={handlePublish}
+              disabled={publishLoading}
+              className="dashboard-btn-publish"
+            >
+              {publishLoading ? 'Publishing…' : 'Publish'}
+            </button>
+          )}
+          {isBackendConnected() && (
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="dashboard-btn-unpublish"
+              style={{ marginLeft: '0.5rem' }}
+              title="Sign out"
+            >
+              Sign out
+            </button>
+          )}
+        </div>
+      </header>
+
+      {!isBackendConnected() && (
+        <div className="dashboard-banner">
+          Using local storage. Set up Supabase and deploy to get a live URL and sync across devices.
+        </div>
+      )}
+
+      <div className="dashboard-main">
+        {/* Left panel — content editor */}
+        <aside className="dashboard-panel">
+          <div className="dashboard-panel-header">
+            <h2 className="dashboard-panel-title">Content & media</h2>
+            <p className="dashboard-panel-subtitle">Edit below — changes save automatically</p>
+          </div>
+          <div className="dashboard-panel-content">
+            {template.fields.map((f) => (
+              <div key={f.key} className="dashboard-field-group">
+                <label className="dashboard-field-label">
+                  <span style={{ marginRight: '0.35rem' }}>{getFieldIcon(f.type)}</span>
+                  {f.label}
+                </label>
+                {f.type === 'color' ? (
+                  <div className="dashboard-color-wrap">
+                    <input
+                      type="color"
+                      value={content[f.key] ?? f.default ?? '#6366f1'}
+                      onChange={(e) => updateField(f.key, e.target.value)}
+                      className="dashboard-color-input"
+                    />
+                    <input
+                      type="text"
+                      value={content[f.key] ?? f.default ?? ''}
+                      onChange={(e) => updateField(f.key, e.target.value)}
+                      className="dashboard-field-input dashboard-color-hex"
+                      placeholder="#6366f1"
+                    />
+                  </div>
+                ) : f.type === 'image' ? (
+                  <label className="dashboard-image-upload">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleImageChange(f.key, e.target.files?.[0])}
+                    />
+                    <div className="dashboard-image-upload-icon">📷</div>
+                    <div className="dashboard-image-upload-text">
+                      {(content[f.key] ?? f.default) ? 'Change image' : 'Click to upload'}
+                    </div>
+                    {(content[f.key] ?? f.default) && (
+                      <img
+                        src={content[f.key] || f.default}
+                        alt=""
+                        className="dashboard-image-preview"
+                      />
+                    )}
+                  </label>
+                ) : f.type === 'textarea' ? (
+                  <textarea
+                    value={content[f.key] ?? ''}
+                    onChange={(e) => updateField(f.key, e.target.value)}
+                    className="dashboard-field-input dashboard-field-textarea"
+                    placeholder={f.default || ''}
+                    rows={3}
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={content[f.key] ?? ''}
+                    onChange={(e) => updateField(f.key, e.target.value)}
+                    className="dashboard-field-input"
+                    placeholder={f.default || ''}
+                  />
+                )}
+              </div>
+            ))}
+
+            <div className="dashboard-publish-section">
+              {site.status === 'published' ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleUnpublish}
+                    disabled={publishLoading}
+                    className="dashboard-publish-btn secondary"
+                  >
+                    {publishLoading ? '…' : 'Unpublish site'}
+                  </button>
+                  <p className="dashboard-publish-hint">Your site is live. Unpublish to hide it from the public.</p>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={handlePublish}
+                    disabled={publishLoading}
+                    className="dashboard-publish-btn primary"
+                  >
+                    {publishLoading ? 'Publishing…' : 'Publish site'}
+                  </button>
+                  <p className="dashboard-publish-hint">Make your site live at a public URL. Anyone with the link can view it.</p>
+                </>
+              )}
+            </div>
           </div>
         </aside>
 
-        <section style={styles.previewSection}>
-          <h3 style={styles.previewTitle}>Preview</h3>
-          <iframe
-            title="Preview"
-            srcDoc={previewHtml}
-            style={styles.previewFrame}
-            sandbox="allow-same-origin"
-          />
+        {/* Preview area with device frame */}
+        <section className="dashboard-preview-wrap">
+          <div className="dashboard-preview-frame">
+            <div className={`dashboard-device-frame ${deviceMode}`}>
+              <iframe
+                title="Preview"
+                srcDoc={previewHtml}
+                className="dashboard-preview-iframe"
+                sandbox="allow-same-origin"
+              />
+            </div>
+          </div>
         </section>
       </div>
     </div>
   )
-}
-
-const styles = {
-  wrapper: {
-    minHeight: '100vh',
-    background: 'var(--bg)',
-    color: 'var(--text)',
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  loading: {
-    padding: '2rem',
-    textAlign: 'center',
-    color: 'var(--muted)',
-  },
-  error: {
-    padding: '1rem',
-    color: '#f87171',
-  },
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-    padding: '1rem 1.5rem',
-    borderBottom: '1px solid var(--border)',
-    background: 'var(--surface)',
-  },
-  backBtn: {
-    background: 'transparent',
-    color: 'var(--muted)',
-    padding: '0.5rem',
-    cursor: 'pointer',
-    border: 'none',
-    font: 'inherit',
-  },
-  siteNameInput: {
-    flex: 1,
-    maxWidth: '280px',
-    padding: '0.5rem 0.75rem',
-    background: 'var(--bg)',
-    border: '1px solid var(--border)',
-    borderRadius: '8px',
-    color: 'var(--text)',
-    fontSize: '1rem',
-  },
-  saving: {
-    fontSize: '0.8rem',
-    color: 'var(--muted)',
-  },
-  banner: {
-    padding: '0.5rem 1rem',
-    background: 'rgba(245, 158, 11, 0.15)',
-    color: '#f59e0b',
-    fontSize: '0.85rem',
-  },
-  statusBar: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-    padding: '0.5rem 1rem',
-    borderBottom: '1px solid var(--border)',
-    flexWrap: 'wrap',
-  },
-  statusLabel: {
-    fontSize: '0.85rem',
-    color: 'var(--muted)',
-  },
-  badge: {
-    padding: '0.2rem 0.5rem',
-    borderRadius: '6px',
-    fontSize: '0.8rem',
-    fontWeight: 600,
-  },
-  badgeDraft: {
-    background: 'var(--border)',
-    color: 'var(--muted)',
-  },
-  badgePublished: {
-    background: 'rgba(16, 185, 129, 0.2)',
-    color: '#10b981',
-  },
-  liveLink: {
-    marginLeft: '0.5rem',
-    fontSize: '0.9rem',
-  },
-  smallBtn: {
-    padding: '0.25rem 0.5rem',
-    fontSize: '0.8rem',
-    background: 'var(--surface)',
-    border: '1px solid var(--border)',
-    borderRadius: '6px',
-    color: 'var(--text)',
-    cursor: 'pointer',
-  },
-  layout: {
-    flex: 1,
-    display: 'grid',
-    gridTemplateColumns: '320px 1fr',
-    gap: 0,
-    minHeight: 0,
-  },
-  sidebar: {
-    padding: '1.5rem',
-    borderRight: '1px solid var(--border)',
-    background: 'var(--surface)',
-    overflowY: 'auto',
-  },
-  sidebarTitle: {
-    marginBottom: '0.25rem',
-    fontSize: '1rem',
-    fontWeight: 600,
-  },
-  sidebarHint: {
-    fontSize: '0.8rem',
-    color: 'var(--muted)',
-    marginBottom: '1rem',
-  },
-  field: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.35rem',
-    marginBottom: '1rem',
-    fontSize: '0.875rem',
-  },
-  input: {
-    padding: '0.5rem 0.75rem',
-    width: '100%',
-    border: '1px solid var(--border)',
-    borderRadius: '8px',
-    background: 'var(--bg)',
-    color: 'var(--text)',
-  },
-  colorInput: {
-    width: '100%',
-    height: '40px',
-    padding: '2px',
-    cursor: 'pointer',
-  },
-  imageField: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.5rem',
-  },
-  fileInput: {
-    fontSize: '0.8rem',
-  },
-  imagePreview: {
-    maxWidth: '100%',
-    maxHeight: '120px',
-    objectFit: 'cover',
-    borderRadius: '8px',
-    border: '1px solid var(--border)',
-  },
-  publishBlock: {
-    marginTop: '1.5rem',
-    paddingTop: '1rem',
-    borderTop: '1px solid var(--border)',
-  },
-  publishBtn: {
-    width: '100%',
-    padding: '0.75rem',
-    background: 'var(--accent)',
-    color: '#fff',
-    fontWeight: 600,
-    border: 'none',
-    borderRadius: '10px',
-    cursor: 'pointer',
-    fontSize: '1rem',
-  },
-  unpublishBtn: {
-    width: '100%',
-    padding: '0.75rem',
-    background: 'var(--surface)',
-    color: 'var(--muted)',
-    border: '1px solid var(--border)',
-    borderRadius: '10px',
-    cursor: 'pointer',
-    fontSize: '0.9rem',
-  },
-  publishHint: {
-    fontSize: '0.8rem',
-    color: 'var(--muted)',
-    marginTop: '0.5rem',
-  },
-  previewSection: {
-    display: 'flex',
-    flexDirection: 'column',
-    minHeight: 0,
-    padding: '1rem',
-  },
-  previewTitle: {
-    marginBottom: '0.5rem',
-    fontSize: '0.875rem',
-    color: 'var(--muted)',
-    fontWeight: 600,
-  },
-  previewFrame: {
-    flex: 1,
-    minHeight: 0,
-    border: '1px solid var(--border)',
-    borderRadius: '8px',
-    background: '#fff',
-  },
 }

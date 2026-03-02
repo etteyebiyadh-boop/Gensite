@@ -4,6 +4,7 @@
 
 create table if not exists public.sites (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id),
   name text not null default 'My site',
   template_id text not null default 'simple__0',
   content jsonb not null default '{}',
@@ -14,17 +15,21 @@ create table if not exists public.sites (
   updated_at timestamptz not null default now()
 );
 
--- Optional: RLS so only service role can write; anyone can read published_html via API
 alter table public.sites enable row level security;
+
+-- Drop existing policies if they exist (to cleanly apply new ones)
+drop policy if exists "Allow public read for published sites" on public.sites;
+drop policy if exists "Allow all for service role (insert, update)" on public.sites;
+drop policy if exists "Allow owners to manage their sites" on public.sites;
 
 create policy "Allow public read for published sites"
   on public.sites for select
-  using (true);
+  using (status = 'published');
 
-create policy "Allow all for service role (insert, update)"
+create policy "Allow owners to manage their sites"
   on public.sites for all
-  using (true)
-  with check (true);
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
 
 -- Storage bucket for site images (optional; create in Supabase Dashboard > Storage)
 -- Bucket name: site-assets, public

@@ -1,13 +1,14 @@
-// Site API: create, get, update, publish. Tries same-origin /api first; falls back to localStorage on 503 or error.
+// Site API: create, get, update, publish. Tries Supabase directly if configured, else falls back to localStorage.
+import { createClient } from '@supabase/supabase-js'
 
-const EXPLICIT_BASE = typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE
+const SUPABASE_URL = import.meta.env?.VITE_SUPABASE_URL
+const SUPABASE_KEY = import.meta.env?.VITE_SUPABASE_ANON_KEY
+
+export const supabase = (SUPABASE_URL && SUPABASE_KEY)
+  ? createClient(SUPABASE_URL, SUPABASE_KEY)
+  : null
+
 const STORAGE_KEY = 'website-builder-sites'
-
-function getBase() {
-  if (EXPLICIT_BASE) return String(EXPLICIT_BASE).replace(/\/$/, '')
-  if (typeof window !== 'undefined') return '' // same-origin /api
-  return null
-}
 
 function localGetAll() {
   try {
@@ -27,37 +28,34 @@ function generateId() {
 }
 
 export async function createSite({ name, templateId, content }) {
-  const base = getBase()
-  const payload = { name: name || 'My site', template_id: templateId, content: content || {} }
-  const url = base === '' ? '/api/sites/create' : `${base}/api/sites/create`
+  if (supabase) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('You must be logged in to create a site.')
 
-  if (base !== null) {
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+    const { data, error } = await supabase
+      .from('sites')
+      .insert({
+        user_id: user.id,
+        name: name || 'My site',
+        template_id: templateId || 'simple__0',
+        content: content || {},
+        status: 'draft',
       })
-      if (res.ok) return res.json()
-      if (res.status === 503) {
-        // Backend not configured; fall through to localStorage
-      } else {
-        const err = await res.text()
-        throw new Error(err || 'Failed to create site')
-      }
-    } catch (e) {
-      if (e.message && e.message.includes('Failed to create')) throw e
-      // Network error; fall through to localStorage
-    }
+      .select('id, name, template_id, content, status, published_at, created_at, updated_at')
+      .single()
+
+    if (error) throw new Error(error.message)
+    return data
   }
 
+  // Fallback local storage
   const id = generateId()
   const sites = localGetAll()
   sites[id] = {
     id,
-    name: payload.name,
-    template_id: payload.template_id,
-    content: payload.content,
+    name: name || 'My site',
+    template_id: templateId,
+    content: content || {},
     status: 'draft',
     published_html: null,
     published_at: null,
@@ -65,21 +63,20 @@ export async function createSite({ name, templateId, content }) {
     updated_at: new Date().toISOString(),
   }
   localSetAll(sites)
-  return { id, ...sites[id] }
+  return sites[id]
 }
 
 export async function getSite(id) {
-  const base = getBase()
-  const url = base === '' ? `/api/sites/${id}` : base ? `${base}/api/sites/${id}` : null
-  if (url) {
-    try {
-      const res = await fetch(url)
-      if (res.ok) return res.json()
-      if (res.status === 503) { /* fall through */ } else throw new Error('Site not found')
-    } catch (e) {
-      if (e.message === 'Site not found') throw e
-    }
+  if (supabase) {
+    const { data, error } = await supabase
+      .from('sites')
+      .select('*')
+      .eq('id', id)
+      .single()
+    if (error) throw new Error('Site not found')
+    return data
   }
+
   const sites = localGetAll()
   const site = sites[id]
   if (!site) throw new Error('Site not found')
@@ -87,51 +84,46 @@ export async function getSite(id) {
 }
 
 export async function updateSite(id, { name, content }) {
-  const base = getBase()
-  const payload = {}
-  if (name !== undefined) payload.name = name
-  if (content !== undefined) payload.content = content
+  if (supabase) {
+    const updates = { updated_at: new Date().toISOString() }
+    if (name !== undefined) updates.name = name
+    if (content !== undefined) updates.content = content
 
-  const url = base === '' ? `/api/sites/${id}` : base ? `${base}/api/sites/${id}` : null
-  if (url) {
-    try {
-      const res = await fetch(url, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      if (res.ok) return res.json()
-      if (res.status !== 503) throw new Error('Failed to update')
-    } catch (e) {
-      if (e.message === 'Failed to update') throw e
-    }
+    const { data, error } = await supabase
+      .from('sites')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) throw new Error(error.message)
+    return data
   }
 
   const sites = localGetAll()
   const site = sites[id]
   if (!site) throw new Error('Site not found')
-  if (payload.name !== undefined) site.name = payload.name
-  if (payload.content !== undefined) site.content = payload.content
+  if (name !== undefined) site.name = name
+  if (content !== undefined) site.content = content
   site.updated_at = new Date().toISOString()
   localSetAll(sites)
   return site
 }
 
 export async function publishSite(id, html) {
-  const base = getBase()
-  const url = base === '' ? `/api/sites/${id}/publish` : base ? `${base}/api/sites/${id}/publish` : null
-  if (url) {
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html }),
+  if (supabase) {
+    const { data, error } = await supabase
+      .from('sites')
+      .update({
+        published_html: html,
+        status: 'published',
+        published_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
-      if (res.ok) return res.json()
-      if (res.status !== 503) throw new Error(await res.text() || 'Publish failed')
-    } catch (e) {
-      if (e.message && e.message.includes('Publish')) throw e
-    }
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) throw new Error(error.message)
+    return data
   }
 
   const sites = localGetAll()
@@ -146,16 +138,20 @@ export async function publishSite(id, html) {
 }
 
 export async function unpublishSite(id) {
-  const base = getBase()
-  const url = base === '' ? `/api/sites/${id}/unpublish` : base ? `${base}/api/sites/${id}/unpublish` : null
-  if (url) {
-    try {
-      const res = await fetch(url, { method: 'POST' })
-      if (res.ok) return res.json()
-      if (res.status !== 503) throw new Error('Failed to unpublish')
-    } catch (e) {
-      if (e.message === 'Failed to unpublish') throw e
-    }
+  if (supabase) {
+    const { data, error } = await supabase
+      .from('sites')
+      .update({
+        published_html: null,
+        status: 'draft',
+        published_at: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) throw new Error(error.message)
+    return data
   }
 
   const sites = localGetAll()
@@ -170,11 +166,12 @@ export async function unpublishSite(id) {
 }
 
 export function getLiveSiteUrl(id) {
-  if (getBase() === null) return null
+  if (!isBackendConnected()) return null
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
   return `${origin}/api/s/${id}`
 }
 
 export function isBackendConnected() {
-  return getBase() !== null
+  return !!supabase
 }
+

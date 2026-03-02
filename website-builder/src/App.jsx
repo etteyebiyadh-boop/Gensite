@@ -3,8 +3,9 @@ import { Routes, Route, useNavigate } from 'react-router-dom'
 import { templates, getTemplateById, getDefaultContent, searchTemplates, getCategories, getTemplatesByCategory } from './templates'
 import { generateHtml } from './generateHtml'
 import { requestAiSite, getQuickSuggestions } from './aiDesigner'
-import { createSite } from './lib/siteApi'
+import { createSite, supabase } from './lib/siteApi'
 import Dashboard from './pages/Dashboard'
+import AuthModal from './components/AuthModal'
 
 function PermissionModal({ show, siteName, onSiteNameChange, onConfirm, onCancel, loading }) {
   if (!show) return null
@@ -161,10 +162,12 @@ function Builder({ onBack }) {
   const [aiInput, setAiInput] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
   const [showPermissionModal, setShowPermissionModal] = useState(false)
+  const [showAuthModal, setShowAuthModal] = useState(false)
   const [siteName, setSiteName] = useState('My site')
   const [dashboardCreating, setDashboardCreating] = useState(false)
   const [aiEditInput, setAiEditInput] = useState('')
   const [aiEditLoading, setAiEditLoading] = useState(false)
+  const [previewMode, setPreviewMode] = useState('desktop') // 'desktop' | 'tablet' | 'mobile'
   const [expandedCategories, setExpandedCategories] = useState(() => new Set()) // which categories show all templates
   const categoryRefs = useRef({})
 
@@ -193,12 +196,20 @@ function Builder({ onBack }) {
 
   async function handleOpenDashboard() {
     if (!templateId || !template) return
+    if (supabase) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        setShowPermissionModal(false)
+        setShowAuthModal(true)
+        return
+      }
+    }
     setDashboardCreating(true)
     try {
       const data = await createSite({ name: siteName, templateId, content })
       navigate(`/site/${data.id}`)
     } catch (err) {
-      setAiMessages((prev) => [...prev, { from: 'ai', text: 'Could not create dashboard. Try again.' }])
+      setAiMessages((prev) => [...prev, { from: 'ai', text: err.message || 'Could not create dashboard. Try again.' }])
     } finally {
       setDashboardCreating(false)
     }
@@ -446,13 +457,43 @@ function Builder({ onBack }) {
             loading={dashboardCreating}
           />
           <section style={styles.previewSection}>
-            <h3 style={styles.previewTitle}>Preview</h3>
-            <iframe
-              title="Preview"
-              srcDoc={previewHtml}
-              style={styles.previewFrame}
-              sandbox="allow-same-origin"
-            />
+            <div style={styles.previewHeader}>
+              <h3 style={styles.previewTitle}>Live Preview</h3>
+              <div style={styles.deviceToggles}>
+                <button
+                  type="button"
+                  title="Desktop"
+                  onClick={() => setPreviewMode('desktop')}
+                  style={{ ...styles.toggleBtn, ...(previewMode === 'desktop' ? styles.toggleBtnActive : {}) }}>
+                  💻 Desktop
+                </button>
+                <button
+                  type="button"
+                  title="Tablet"
+                  onClick={() => setPreviewMode('tablet')}
+                  style={{ ...styles.toggleBtn, ...(previewMode === 'tablet' ? styles.toggleBtnActive : {}) }}>
+                  📱 Tablet
+                </button>
+                <button
+                  type="button"
+                  title="Mobile"
+                  onClick={() => setPreviewMode('mobile')}
+                  style={{ ...styles.toggleBtn, ...(previewMode === 'mobile' ? styles.toggleBtnActive : {}) }}>
+                  📱 Mobile
+                </button>
+              </div>
+            </div>
+            <div style={styles.previewContainer}>
+              <iframe
+                title="Preview"
+                srcDoc={previewHtml}
+                style={{
+                  ...styles.previewFrame,
+                  width: previewMode === 'desktop' ? '100%' : previewMode === 'tablet' ? '768px' : '375px',
+                }}
+                sandbox="allow-same-origin"
+              />
+            </div>
             <div style={styles.chat}>
               <h3 style={styles.chatTitle}>AI site expert</h3>
               <div style={styles.chatMessages}>
@@ -494,6 +535,15 @@ function Builder({ onBack }) {
           </section>
         </div>
       )}
+
+      <AuthModal
+        show={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onAuthSuccess={() => {
+          setShowAuthModal(false)
+          handleOpenDashboard()
+        }}
+      />
     </div>
   )
 }
@@ -537,19 +587,20 @@ const styles = {
     marginBottom: '1rem',
   },
   landingBrowser: {
-    background: 'var(--surface)',
-    border: '1px solid var(--border)',
-    borderRadius: '12px',
+    background: 'var(--glass-bg)',
+    backdropFilter: 'blur(16px)',
+    border: '1px solid var(--glass-border)',
+    borderRadius: '16px',
     overflow: 'hidden',
-    boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+    boxShadow: 'var(--shadow-xl)',
   },
   landingBrowserBar: {
     display: 'flex',
     alignItems: 'center',
     gap: '0.75rem',
-    padding: '0.5rem 0.75rem',
-    background: '#1a1a20',
-    borderBottom: '1px solid var(--border)',
+    padding: '0.6rem 1rem',
+    background: 'rgba(24, 24, 27, 0.8)',
+    borderBottom: '1px solid var(--glass-border)',
   },
   landingBrowserDots: {
     fontSize: '0.6rem',
@@ -565,7 +616,7 @@ const styles = {
   landingBrowserContent: {
     minHeight: '220px',
     padding: '1.25rem',
-    background: 'var(--bg)',
+    background: 'var(--surface)',
   },
   landingMockNav: {
     display: 'flex',
@@ -578,6 +629,14 @@ const styles = {
   landingMockNavLogo: {
     fontWeight: 700,
     color: 'var(--accent)',
+    fontSize: '0.9rem',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+  },
+  landingMockNavLogo: {
+    fontWeight: 700,
+    color: 'var(--text)',
     fontSize: '0.9rem',
   },
   landingMockNavLink: {
@@ -637,10 +696,11 @@ const styles = {
   cta: {
     background: 'var(--accent)',
     color: '#fff',
-    padding: '0.75rem 1.5rem',
-    borderRadius: '10px',
+    padding: '0.875rem 1.75rem',
+    borderRadius: '12px',
     fontWeight: 600,
     fontSize: '1rem',
+    boxShadow: '0 0 20px rgba(99,102,241,0.2)',
   },
   builder: {
     minHeight: '100vh',
@@ -652,9 +712,11 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '1rem',
-    padding: '1rem 1.5rem',
+    padding: '1rem 1.75rem',
     borderBottom: '1px solid var(--border)',
     background: 'var(--surface)',
+    boxShadow: 'var(--shadow-sm)',
+    zIndex: 20,
   },
   backBtn: {
     background: 'transparent',
@@ -764,12 +826,19 @@ const styles = {
     flexDirection: 'column',
     alignItems: 'flex-start',
     textAlign: 'left',
-    padding: '1rem',
+    padding: '1.25rem',
     background: 'var(--surface)',
     border: '1px solid var(--border)',
-    borderLeft: '3px solid var(--border)',
+    borderLeft: '4px solid var(--border)',
     borderRadius: '12px',
     color: 'var(--text)',
+    transition: 'all 0.2s ease',
+    boxShadow: 'var(--shadow-sm)',
+  },
+  templateCardHover: {
+    transform: 'translateY(-2px)',
+    boxShadow: 'var(--shadow-md)',
+    borderColor: 'var(--accent)',
   },
   templateName: {
     fontWeight: 600,
@@ -844,12 +913,14 @@ const styles = {
   dashboardBtn: {
     marginTop: '0.5rem',
     width: '100%',
-    padding: '0.6rem',
-    background: 'var(--surface)',
-    color: 'var(--accent)',
-    border: '1px solid var(--accent)',
+    padding: '0.75rem',
+    background: 'var(--accent)',
+    color: '#fff',
+    borderRadius: '8px',
     fontWeight: 600,
     fontSize: '0.9rem',
+    boxShadow: 'var(--shadow-sm)',
+    transition: 'all 0.2s',
   },
   dashboardHint: {
     fontSize: '0.75rem',
@@ -901,11 +972,12 @@ const styles = {
   },
   modal: {
     background: 'var(--surface)',
-    border: '1px solid var(--border)',
-    borderRadius: '16px',
-    padding: '1.5rem',
-    maxWidth: '400px',
+    border: '1px solid var(--glass-border)',
+    borderRadius: '20px',
+    padding: '2rem',
+    maxWidth: '420px',
     width: '100%',
+    boxShadow: 'var(--shadow-xl)',
   },
   modalTitle: {
     marginBottom: '0.5rem',
@@ -958,20 +1030,63 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     minHeight: 0,
-    padding: '1rem',
+    padding: '1.5rem',
+    background: 'var(--bg)',
+  },
+  previewHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: '1rem',
   },
   previewTitle: {
-    marginBottom: '0.5rem',
-    fontSize: '0.875rem',
-    color: 'var(--muted)',
+    fontSize: '1rem',
+    color: 'var(--text)',
     fontWeight: 600,
+    margin: 0,
+  },
+  deviceToggles: {
+    display: 'flex',
+    gap: '0.5rem',
+    background: 'var(--surface)',
+    padding: '0.25rem',
+    borderRadius: '8px',
+    border: '1px solid var(--border)',
+  },
+  toggleBtn: {
+    background: 'transparent',
+    color: 'var(--muted)',
+    padding: '0.35rem 0.75rem',
+    fontSize: '0.8rem',
+    borderRadius: '6px',
+    fontWeight: 500,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.35rem',
+  },
+  toggleBtnActive: {
+    background: 'var(--border)',
+    color: 'var(--text)',
+    boxShadow: 'var(--shadow-sm)',
+  },
+  previewContainer: {
+    flex: 1,
+    minHeight: 0,
+    background: 'var(--surface)',
+    borderRadius: '12px',
+    border: '1px solid var(--border)',
+    overflow: 'hidden',
+    position: 'relative',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: '0',
   },
   previewFrame: {
     flex: 1,
-    minHeight: 0,
-    border: '1px solid var(--border)',
-    borderRadius: '8px',
+    border: 'none',
     background: '#fff',
+    transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   },
   chat: {
     marginTop: '0.75rem',
