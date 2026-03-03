@@ -126,6 +126,19 @@ export async function updateSite(id, { name, content }) {
 
 export async function publishSite(id, html) {
   if (supabase) {
+    const { data: existingSite, error: existingError } = await supabase
+      .from('sites')
+      .select('status')
+      .eq('id', id)
+      .single()
+
+    if (existingError) throw new Error(existingError.message)
+
+    // Enforce published-site limits only when moving draft -> published.
+    if (existingSite?.status !== 'published') {
+      await checkPublishLimit(id)
+    }
+
     const { data, error } = await supabase
       .from('sites')
       .update({
@@ -144,6 +157,11 @@ export async function publishSite(id, html) {
   const sites = localGetAll()
   const site = sites[id]
   if (!site) throw new Error('Site not found')
+
+  if (site.status !== 'published') {
+    await checkPublishLimit(id)
+  }
+
   site.published_html = html
   site.status = 'published'
   site.published_at = new Date().toISOString()
@@ -363,10 +381,11 @@ export async function getUserLimits() {
 
 export async function getUserUsage() {
   if (!supabase) {
+    const sites = Object.values(localGetAll())
     return {
-      totalSites: 0,
-      publishedSites: 0,
-      totalViews: 0
+      totalSites: sites.length,
+      publishedSites: sites.filter((site) => site.status === 'published').length,
+      totalViews: sites.reduce((sum, site) => sum + (site.view_count || 0), 0),
     }
   }
 

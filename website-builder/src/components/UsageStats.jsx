@@ -73,6 +73,7 @@ export default function UsageStats({ compact = false, onUpgrade }) {
     ]
 
     if (compact) {
+        const siteUsagePercent = getPercentage(usage.totalSites, limits.siteLimit)
         return (
             <div style={styles.compact}>
                 <div style={styles.compactHeader}>
@@ -84,10 +85,15 @@ export default function UsageStats({ compact = false, onUpgrade }) {
                 <div style={styles.compactBar}>
                     <div style={{
                         ...styles.compactBarFill,
-                        width: `${getPercentage(usage.totalSites, limits.siteLimit)}%`,
-                        background: getPercentage(usage.totalSites, limits.siteLimit) > 80 ? '#ef4444' : '#6366f1'
+                        width: `${siteUsagePercent}%`,
+                        background: siteUsagePercent > 80 ? '#ef4444' : '#6366f1'
                     }} />
                 </div>
+                {onUpgrade && limits.planId !== 'enterprise' && siteUsagePercent >= 75 && (
+                    <button style={styles.compactUpgradeBtn} onClick={onUpgrade}>
+                        Upgrade for more capacity
+                    </button>
+                )}
             </div>
         )
     }
@@ -323,5 +329,16 @@ const styles = {
         height: '100%',
         borderRadius: '2px',
         transition: 'width 0.3s ease'
+    },
+    compactUpgradeBtn: {
+        marginTop: '0.6rem',
+        width: '100%',
+        border: '1px solid rgba(99, 102, 241, 0.35)',
+        borderRadius: '6px',
+        background: 'rgba(99, 102, 241, 0.12)',
+        color: '#c7d2fe',
+        padding: '0.35rem 0.5rem',
+        fontSize: '0.72rem',
+        fontWeight: 600
     }
 }

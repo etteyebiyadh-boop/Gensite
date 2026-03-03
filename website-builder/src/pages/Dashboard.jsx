@@ -107,7 +107,12 @@ export default function Dashboard() {
     const html = generateHtml(site.template_id, content)
     publishSite(id, html)
       .then((updated) => setSite(updated))
-      .catch((e) => setError(e.message))
+      .catch((e) => {
+        setError(e.message)
+        if ((e.message || '').toLowerCase().includes('upgrade')) {
+          setShowPricing(true)
+        }
+      })
       .finally(() => setPublishLoading(false))
   }
 
@@ -301,6 +306,9 @@ export default function Dashboard() {
             <p className="dashboard-panel-subtitle">Edit below — changes save automatically</p>
           </div>
           <div className="dashboard-panel-content">
+            <div style={{ marginBottom: '1rem' }}>
+              <UsageStats compact onUpgrade={() => setShowPricing(true)} />
+            </div>
             {template.fields.map((f) => (
               <div key={f.key} className="dashboard-field-group">
                 <label className="dashboard-field-label">

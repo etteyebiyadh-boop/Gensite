@@ -85,9 +85,9 @@ export default function Pricing({ show, onClose, onSuccess }) {
                 <button style={styles.closeBtn} onClick={onClose}>×</button>
 
                 <div style={styles.header}>
-                    <h2 style={styles.title}>Choose Your Plan</h2>
+                    <h2 style={styles.title}>Simple, Transparent Pricing</h2>
                     <p style={styles.subtitle}>
-                        Start free, upgrade when you need more
+                        Start free, upgrade when you need to scale
                     </p>
 
                     {usage && limits && (

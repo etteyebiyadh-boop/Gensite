@@ -1,0 +1,515 @@
+.lp-shell {
+  --lp-bg: #f6f3ec;
+  --lp-surface: #fffdfa;
+  --lp-border: #e8dece;
+  --lp-text: #1f2a28;
+  --lp-muted: #5f6b67;
+  --lp-accent: #0f8b7f;
+  --lp-accent-strong: #0b6f66;
+  --lp-accent-soft: #d9efeb;
+  --lp-shadow: 0 12px 34px -18px rgba(31, 42, 40, 0.38);
+
+  min-height: 100vh;
+  color: var(--lp-text);
+  background:
+    radial-gradient(1200px 500px at 5% 0%, #dfeee9 0%, transparent 55%),
+    radial-gradient(1000px 500px at 90% 8%, #f8ead2 0%, transparent 55%),
+    var(--lp-bg);
+  font-family: "Manrope", "Segoe UI", sans-serif;
+  padding: 1rem 1rem 4rem;
+}
+
+.lp-topbar,
+.lp-hero,
+.lp-benefits,
+.lp-trust,
+.lp-onboarding,
+.lp-referral,
+.lp-pricing,
+.lp-email,
+.lp-faq {
+  width: min(1100px, 100%);
+  margin: 0 auto;
+}
+
+.lp-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.85rem 0;
+  margin-bottom: 1.5rem;
+}
+
+.lp-brand {
+  color: var(--lp-text);
+  text-decoration: none;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  font-size: 1.1rem;
+}
+
+.lp-nav {
+  display: none;
+  gap: 1rem;
+}
+
+.lp-nav a {
+  color: var(--lp-muted);
+  text-decoration: none;
+  font-size: 0.92rem;
+}
+
+.lp-btn {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.7rem 1.05rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.lp-btn-primary {
+  background: var(--lp-accent);
+  color: #ffffff;
+}
+
+.lp-btn-primary:hover {
+  background: var(--lp-accent-strong);
+}
+
+.lp-btn-ghost {
+  background: transparent;
+  border-color: var(--lp-border);
+  color: var(--lp-text);
+}
+
+.lp-btn-ghost:hover {
+  background: #faf6ee;
+}
+
+.lp-hero {
+  background: var(--lp-surface);
+  border: 1px solid var(--lp-border);
+  border-radius: 22px;
+  padding: 1.25rem;
+  box-shadow: var(--lp-shadow);
+}
+
+.lp-kicker {
+  margin: 0 0 0.45rem;
+  color: var(--lp-accent-strong);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.lp-hero h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 5.2vw, 3.2rem);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+}
+
+.lp-subhead {
+  margin: 0.9rem 0 0;
+  color: var(--lp-muted);
+  max-width: 66ch;
+}
+
+.lp-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.lp-prompt-form {
+  margin-top: 1.2rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--lp-border);
+}
+
+.lp-prompt-form label {
+  display: block;
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 0.55rem;
+}
+
+.lp-prompt-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.lp-prompt-row input,
+.lp-email-form input {
+  width: 100%;
+  border: 1px solid var(--lp-border);
+  border-radius: 12px;
+  padding: 0.8rem 0.95rem;
+  font-size: 0.95rem;
+  color: var(--lp-text);
+  background: #ffffff;
+}
+
+.lp-prompt-row input:focus,
+.lp-email-form input:focus {
+  outline: none;
+  border-color: var(--lp-accent);
+  box-shadow: 0 0 0 3px rgba(15, 139, 127, 0.16);
+}
+
+.lp-suggestion-row {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.lp-suggestion-row button {
+  border: 1px solid var(--lp-border);
+  background: #ffffff;
+  color: var(--lp-muted);
+  border-radius: 999px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.78rem;
+}
+
+.lp-section-head {
+  margin-bottom: 0.95rem;
+}
+
+.lp-section-head h2 {
+  margin: 0;
+  font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+  font-size: clamp(1.3rem, 3vw, 2rem);
+  letter-spacing: -0.02em;
+}
+
+.lp-section-head p {
+  margin: 0.4rem 0 0;
+  color: var(--lp-muted);
+}
+
+.lp-benefits,
+.lp-trust,
+.lp-onboarding,
+.lp-testimonials,
+.lp-referral,
+.lp-pricing,
+.lp-email,
+.lp-faq {
+  margin-top: 2.2rem;
+}
+
+.lp-benefits-grid,
+.lp-trust-grid,
+.lp-testimonials-grid,
+.lp-pricing-grid,
+.lp-faq-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.lp-card,
+.lp-trust-grid article,
+.lp-steps li,
+.lp-price-card,
+.lp-testimonial-card,
+.lp-faq-grid article,
+.lp-email,
+.lp-referral {
+  background: var(--lp-surface);
+  border: 1px solid var(--lp-border);
+  border-radius: 16px;
+}
+
+.lp-card,
+.lp-trust-grid article,
+.lp-steps li,
+.lp-price-card,
+.lp-faq-grid article {
+  padding: 1rem;
+}
+
+.lp-card h3,
+.lp-price-card h3,
+.lp-faq-grid h3,
+.lp-steps h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.lp-card p,
+.lp-price-card p,
+.lp-faq-grid p,
+.lp-steps p,
+.lp-email p {
+  margin: 0.55rem 0 0;
+  color: var(--lp-muted);
+}
+
+.lp-trust-grid article {
+  text-align: center;
+}
+
+.lp-trust-metric {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--lp-accent-strong);
+}
+
+.lp-trust-label {
+  margin: 0.25rem 0 0;
+  color: var(--lp-muted);
+  font-size: 0.86rem;
+}
+
+.lp-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.75rem;
+  counter-reset: step;
+}
+
+.lp-steps li {
+  position: relative;
+  padding-left: 3.2rem;
+}
+
+.lp-steps li::before {
+  counter-increment: step;
+  content: counter(step);
+  position: absolute;
+  left: 0.95rem;
+  top: 0.95rem;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 999px;
+  background: var(--lp-accent-soft);
+  color: var(--lp-accent-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.lp-referral {
+  padding: 1.1rem;
+}
+
+.lp-referral h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.lp-referral p {
+  margin: 0.45rem 0 0.85rem;
+  color: var(--lp-muted);
+}
+
+.lp-referral-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.lp-referral-row code {
+  display: block;
+  border: 1px solid var(--lp-border);
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--lp-text);
+  padding: 0.55rem 0.65rem;
+  font-size: 0.78rem;
+  overflow-x: auto;
+}
+
+.lp-price-card {
+  position: relative;
+}
+
+.lp-price {
+  margin: 0.5rem 0 0;
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--lp-text);
+}
+
+.lp-price-sub {
+  margin-top: 0.25rem;
+  font-size: 0.86rem;
+  color: var(--lp-muted);
+}
+
+.lp-price-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0.85rem 0 1rem;
+  display: grid;
+  gap: 0.45rem;
+  color: var(--lp-muted);
+  font-size: 0.9rem;
+}
+
+.lp-price-card li::before {
+  content: "•";
+  color: var(--lp-accent-strong);
+  margin-right: 0.4rem;
+}
+
+.lp-price-card-pro {
+  border-color: #a0d8cf;
+  background: linear-gradient(180deg, #f4fbf9 0%, #fffdfa 65%);
+}
+
+.lp-price-badge {
+  margin: 0;
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  background: var(--lp-accent-soft);
+  color: var(--lp-accent-strong);
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.lp-email {
+  padding: 1rem;
+}
+
+.lp-email h2 {
+  margin: 0;
+}
+
+.lp-email-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-top: 0.85rem;
+}
+
+.lp-email-form button {
+  border: 0;
+  border-radius: 12px;
+  padding: 0.75rem 0.95rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--lp-accent);
+}
+
+.lp-email-form button:hover {
+  background: var(--lp-accent-strong);
+}
+
+.lp-form-status {
+  margin-top: 0.55rem;
+  color: var(--lp-accent-strong);
+  font-size: 0.85rem;
+}
+
+/* Testimonial Card Styles */
+.lp-testimonial-card {
+  padding: 1.5rem;
+}
+
+.lp-testimonial-content p {
+  margin: 0;
+  font-style: italic;
+  color: var(--lp-text);
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.lp-testimonial-author {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.lp-testimonial-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: var(--lp-accent);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.lp-testimonial-name {
+  font-weight: 600;
+  color: var(--lp-text);
+  font-size: 0.9rem;
+}
+
+.lp-testimonial-role {
+  font-size: 0.85rem;
+  color: var(--lp-muted);
+}
+
+@media (min-width: 760px) {
+  .lp-shell {
+    padding: 1.2rem 1.2rem 5rem;
+  }
+
+  .lp-nav {
+    display: flex;
+  }
+
+  .lp-hero {
+    padding: 2rem;
+  }
+
+  .lp-prompt-row,
+  .lp-email-form {
+    grid-template-columns: 1fr auto;
+    display: grid;
+    align-items: center;
+  }
+
+  .lp-benefits-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .lp-trust-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .lp-testimonials-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .lp-pricing-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lp-faq-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lp-referral-row {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .lp-referral-row code {
+    flex: 1;
+  }
+}

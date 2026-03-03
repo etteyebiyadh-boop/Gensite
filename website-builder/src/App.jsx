@@ -8,6 +8,8 @@ import Dashboard from './pages/Dashboard'
 import AuthModal from './components/AuthModal'
 import Wizard from './components/Wizard'
 import Pricing from './components/Pricing'
+import LandingPage from './components/LandingPage'
+import DemoBuilder from './components/DemoBuilder'
 
 function PermissionModal({ show, siteName, onSiteNameChange, onConfirm, onCancel, loading }) {
   if (!show) return null
@@ -41,13 +43,14 @@ function PermissionModal({ show, siteName, onSiteNameChange, onConfirm, onCancel
   )
 }
 
-const LANDING_HEADLINE = 'Professional Websites, Made Easy'
-const LANDING_TAGLINE = 'AI-powered website builder with custom domains, analytics, and team collaboration. Create stunning sites in minutes.'
+const LANDING_HEADLINE = 'Launch Your Website Faster Than You Can Brew Coffee.'
+const LANDING_TAGLINE = 'Gensite translates your vision into a stunning, fully-functional website instantly using AI. No coding, no clunky templates. Perfect for founders, creators, and small businesses.'
 
 function Landing({ onStart, onPricing }) {
   const [phase, setPhase] = useState(0)
   const [charIndex, setCharIndex] = useState(0)
   const [showFinal, setShowFinal] = useState(false)
+  const [promptInput, setPromptInput] = useState('')
 
   useEffect(() => {
     if (showFinal) return
@@ -77,27 +80,119 @@ function Landing({ onStart, onPricing }) {
     return () => timers.forEach(clearTimeout)
   }, [phase])
 
+  const handleGenerate = (e) => {
+    e.preventDefault()
+    if (promptInput.trim()) {
+      onStart({ prompt: promptInput.trim() })
+    }
+  }
+
+  const handleSuggestion = (text) => {
+    onStart({ prompt: text })
+  }
+
   if (showFinal) {
     return (
-      <main style={styles.landing}>
-        <div style={{ ...styles.landingInner, animation: 'landing-reveal-final 0.5s ease forwards' }}>
-          <h1 style={styles.landingTitle}>{LANDING_HEADLINE}</h1>
-          <p style={styles.landingTagline}>{LANDING_TAGLINE}</p>
-          <div style={styles.ctaRow}>
-            <button onClick={onStart} style={styles.cta}>
-              Start building — Free
-            </button>
-            <button onClick={onPricing} style={styles.ctaSecondary}>
-              View Pricing
-            </button>
-          </div>
-          <div style={styles.features}>
-            <div style={styles.feature}><span>🎨</span> 50+ Templates</div>
-            <div style={styles.feature}><span>🤖</span> AI Design</div>
-            <div style={styles.feature}><span>🚀</span> Instant Publish</div>
-            <div style={styles.feature}><span>📊</span> Analytics</div>
+      <main style={styles.landingFull}>
+        <div style={styles.landingHero}>
+          <div style={{ ...styles.landingInner, animation: 'landing-reveal-final 0.5s ease forwards' }}>
+            <h1 style={styles.landingTitle}>{LANDING_HEADLINE}</h1>
+            <p style={styles.landingTagline}>{LANDING_TAGLINE}</p>
+
+            <form onSubmit={handleGenerate} style={styles.promptForm}>
+              <div style={styles.promptInputWrapper}>
+                <input
+                  type="text"
+                  value={promptInput}
+                  onChange={(e) => setPromptInput(e.target.value)}
+                  placeholder="What are we building today? e.g. landing page for my dog walking app"
+                  style={styles.heroPromptInput}
+                />
+                <button type="submit" style={styles.promptBtn}>Generate</button>
+              </div>
+            </form>
+
+            <div style={styles.heroSuggestions}>
+              <button type="button" onClick={() => handleSuggestion("Landing page for a dog walking app")} style={styles.heroPill}>
+                Landing page for a dog walking app
+              </button>
+              <button type="button" onClick={() => handleSuggestion("Waitlist for my new SaaS")} style={styles.heroPill}>
+                Waitlist for my new SaaS
+              </button>
+              <button type="button" onClick={() => handleSuggestion("Portfolio for a UI designer")} style={styles.heroPill}>
+                Portfolio for a UI designer
+              </button>
+            </div>
+
+            <div style={styles.ctaRow}>
+              <button onClick={onPricing} style={styles.ctaSecondary}>
+                See How It Works
+              </button>
+            </div>
+
+            <div style={styles.features}>
+              <div style={styles.feature}><span>⚡</span> Skip the Blank Canvas</div>
+              <div style={styles.feature}><span>🎯</span> Designed to Convert</div>
+              <div style={styles.feature}><span>🔓</span> Always Yours</div>
+            </div>
           </div>
         </div>
+
+        {/* Social Proof Section */}
+        <section style={styles.socialProofSection}>
+          <h2 style={styles.sectionTitle}>Loved by Founders</h2>
+          <div style={styles.testimonial}>
+            <p style={styles.quote}>"Gensite saved me two weeks of design work. I typed in my idea and had a landing page live the same afternoon."</p>
+            <div style={styles.quoteAuthor}>— Sarah T., Solo Founder</div>
+          </div>
+        </section>
+
+        {/* Pricing Preview Section */}
+        <section style={styles.pricingSection}>
+          <h2 style={styles.sectionTitle}>Simple, Transparent Pricing</h2>
+          <div style={styles.pricingCards}>
+            <div style={styles.pricingCard}>
+              <h3 style={styles.planName}>Starter</h3>
+              <div style={styles.planPrice}>Free</div>
+              <ul style={styles.planList}>
+                <li><span style={styles.planCheck}>✓</span> 3 AI generations / month</li>
+                <li><span style={styles.planCheck}>✓</span> Gensite Subdomain</li>
+                <li><span style={styles.planCheck}>✓</span> "Made with Gensite" Badge</li>
+              </ul>
+            </div>
+            <div style={{ ...styles.pricingCard, ...styles.proCard }}>
+              <div style={styles.popularBadge}>Most Popular</div>
+              <h3 style={styles.planName}>Pro</h3>
+              <div style={styles.planPrice}>$12<span style={styles.planMo}>/mo</span></div>
+              <ul style={styles.planList}>
+                <li><span style={styles.planCheck}>✓</span> Unlimited generations</li>
+                <li><span style={styles.planCheck}>✓</span> Custom Domain</li>
+                <li><span style={styles.planCheck}>✓</span> No Watermark</li>
+                <li><span style={styles.planCheck}>✓</span> Export Code</li>
+              </ul>
+              <button onClick={onPricing} style={styles.planUpgradeBtn}>Upgrade to Pro</button>
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ Section */}
+        <section style={styles.faqSection}>
+          <h2 style={styles.sectionTitle}>Frequently Asked Questions</h2>
+          <div style={styles.faqGrid}>
+            <div style={styles.faqItem}>
+              <h4 style={styles.faqQ}>Do I need to know how to code?</h4>
+              <p style={styles.faqA}>Not at all. Just type what you want in plain English.</p>
+            </div>
+            <div style={styles.faqItem}>
+              <h4 style={styles.faqQ}>Can I host it on my own domain?</h4>
+              <p style={styles.faqA}>Yes! Upgrading to Pro lets you seamlessly map your custom domain.</p>
+            </div>
+            <div style={styles.faqItem}>
+              <h4 style={styles.faqQ}>Can I edit the site after generating it?</h4>
+              <p style={styles.faqA}>Absolutely. Our intuitive editor lets you tweak colors, text, and layouts effortlessly.</p>
+            </div>
+          </div>
+        </section>
       </main>
     )
   }
@@ -163,7 +258,7 @@ function Landing({ onStart, onPricing }) {
 
 const quickSuggestions = getQuickSuggestions()
 
-function Builder({ onBack, initialSetup }) {
+function Builder({ onBack, initialSetup, onPricing }) {
   const navigate = useNavigate()
   const [step, setStep] = useState(initialSetup ? 'edit' : 'pick') // 'pick' | 'edit'
   const [templateId, setTemplateId] = useState(null)
@@ -182,6 +277,9 @@ function Builder({ onBack, initialSetup }) {
   const [aiEditLoading, setAiEditLoading] = useState(false)
   const [previewMode, setPreviewMode] = useState('desktop') // 'desktop' | 'tablet' | 'mobile'
   const [expandedCategories, setExpandedCategories] = useState(() => new Set()) // which categories show all templates
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth < 960
+  )
   const categoryRefs = useRef({})
 
   const template = templateId ? getTemplateById(templateId) : null
@@ -197,7 +295,7 @@ function Builder({ onBack, initialSetup }) {
     if (initialSetup && !templateId && step === 'edit') {
       const runAi = async () => {
         setAiLoading(true)
-        const prompt = `A ${initialSetup.vibe?.replace('-', ' ')} website for a ${initialSetup.siteType} named ${initialSetup.siteName}`
+        const prompt = initialSetup.prompt || `A ${initialSetup.vibe?.replace('-', ' ')} website for a ${initialSetup.siteType} named ${initialSetup.siteName}`
         try {
           const result = await requestAiSite(prompt)
           setTemplateId(result.templateId)
@@ -205,7 +303,7 @@ function Builder({ onBack, initialSetup }) {
           setSiteName(initialSetup.siteName || result.templateId?.split('__')[0] || 'My site')
           setAiMessages([
             { from: 'ai', text: 'Describe how you want your site to look and feel...' },
-            { from: 'user', text: `Build me a ${initialSetup.vibe} site for a ${initialSetup.siteType} called ${initialSetup.siteName}.` },
+            { from: 'user', text: prompt },
             { from: 'ai', text: result.suggestion || 'I generated a custom layout based on your answers! You can edit any section on the left.' }
           ])
         } catch (e) {
@@ -218,6 +316,14 @@ function Builder({ onBack, initialSetup }) {
       runAi()
     }
   }, [initialSetup, templateId, step])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+    const onResize = () => setIsMobile(window.innerWidth < 960)
+    onResize()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   function scrollToCategory(cat) {
     const el = categoryRefs.current[cat]
@@ -249,6 +355,9 @@ function Builder({ onBack, initialSetup }) {
       navigate(`/site/${data.id}`)
     } catch (err) {
       setAiMessages((prev) => [...prev, { from: 'ai', text: err.message || 'Could not create dashboard. Try again.' }])
+      if ((err.message || '').toLowerCase().includes('upgrade') && onPricing) {
+        onPricing()
+      }
     } finally {
       setDashboardCreating(false)
     }
@@ -321,7 +430,12 @@ function Builder({ onBack, initialSetup }) {
 
       {step === 'pick' && !aiLoading && (
         <section style={styles.pickSection}>
-          <div style={styles.pickLayout}>
+          <div
+            style={{
+              ...styles.pickLayout,
+              gridTemplateColumns: isMobile ? '1fr' : styles.pickLayout.gridTemplateColumns,
+            }}
+          >
             <div style={styles.pickTemplates}>
               <div style={styles.categoryNavSticky}>
                 <span style={styles.categoryNavLabel}>Jump to:</span>
@@ -347,6 +461,21 @@ function Builder({ onBack, initialSetup }) {
                   style={styles.searchInput}
                 />
               </div>
+              {templatesByCategory.length === 0 && (
+                <div style={styles.emptyStateCard}>
+                  <h2 style={styles.emptyStateTitle}>No templates match this search</h2>
+                  <p style={styles.emptyStateText}>
+                    Try a broader keyword like "SaaS", "agency", or "portfolio", or ask the AI assistant to generate from a prompt.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    style={styles.emptyStateAction}
+                  >
+                    Clear search
+                  </button>
+                </div>
+              )}
               {templatesByCategory.map(({ category, templates: list }) => {
                 const showAll = expandedCategories.has(category) || list.length <= TEMPLATES_SHOWN_INITIAL
                 const visible = showAll ? list : list.slice(0, TEMPLATES_SHOWN_INITIAL)
@@ -388,7 +517,13 @@ function Builder({ onBack, initialSetup }) {
                 )
               })}
             </div>
-            <aside style={styles.pickChat}>
+            <aside
+              style={{
+                ...styles.pickChat,
+                borderLeft: isMobile ? 'none' : styles.pickChat.borderLeft,
+                borderTop: isMobile ? '1px solid var(--border)' : 'none',
+              }}
+            >
               <h3 style={styles.chatTitle}>AI site expert</h3>
               <p style={styles.chatSubtitle}>Describe your site or pick a template below.</p>
               <div style={styles.chatMessages}>
@@ -432,7 +567,12 @@ function Builder({ onBack, initialSetup }) {
       )}
 
       {step === 'edit' && !aiLoading && template && (
-        <div style={styles.editLayout}>
+        <div
+          style={{
+            ...styles.editLayout,
+            gridTemplateColumns: isMobile ? '1fr' : styles.editLayout.gridTemplateColumns,
+          }}
+        >
           <aside style={styles.sidebar}>
             <h3 style={styles.sidebarTitle}>Edit content</h3>
             {template.fields.map((f) => (
@@ -591,6 +731,18 @@ export default function App() {
   const [screen, setScreen] = useState('landing') // 'landing' | 'wizard' | 'builder'
   const [wizardData, setWizardData] = useState(null)
   const [showPricing, setShowPricing] = useState(false)
+  const [showDemo, setShowDemo] = useState(false)
+  const [demoPrompt, setDemoPrompt] = useState('')
+
+  const handleTryDemo = (prompt) => {
+    setDemoPrompt(prompt)
+    setShowDemo(true)
+  }
+
+  const handleDemoUpgrade = () => {
+    setShowDemo(false)
+    setShowPricing(true)
+  }
 
   return (
     <>
@@ -600,7 +752,13 @@ export default function App() {
           path="/*"
           element={
             <>
-              {screen === 'landing' && <Landing onStart={() => setScreen('wizard')} onPricing={() => setShowPricing(true)} />}
+              {screen === 'landing' && (
+                <LandingPage
+                  onTryPrompt={handleTryDemo}
+                  onOpenPricing={() => setShowPricing(true)}
+                  onGuidedSetup={() => setScreen('wizard')}
+                />
+              )}
               {screen === 'wizard' && (
                 <Wizard
                   onCancel={() => setScreen('landing')}
@@ -610,12 +768,24 @@ export default function App() {
                   }}
                 />
               )}
-              {screen === 'builder' && <Builder onBack={() => setScreen('landing')} initialSetup={wizardData} />}
+              {screen === 'builder' && (
+                <Builder
+                  onBack={() => setScreen('landing')}
+                  initialSetup={wizardData}
+                  onPricing={() => setShowPricing(true)}
+                />
+              )}
             </>
           }
         />
       </Routes>
       <Pricing show={showPricing} onClose={() => setShowPricing(false)} />
+      <DemoBuilder 
+        show={showDemo}
+        initialPrompt={demoPrompt}
+        onClose={() => setShowDemo(false)}
+        onUpgrade={handleDemoUpgrade}
+      />
     </>
   )
 }
@@ -681,14 +851,6 @@ const styles = {
   },
   landingMockNavLogo: {
     fontWeight: 700,
-    color: 'var(--accent)',
-    fontSize: '0.9rem',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-  },
-  landingMockNavLogo: {
-    fontWeight: 700,
     color: 'var(--text)',
     fontSize: '0.9rem',
   },
@@ -734,7 +896,59 @@ const styles = {
   },
   landingInner: {
     textAlign: 'center',
-    maxWidth: '28rem',
+    maxWidth: '42rem',
+  },
+  promptForm: {
+    marginBottom: '1rem',
+    width: '100%',
+  },
+  promptInputWrapper: {
+    display: 'flex',
+    alignItems: 'center',
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: '12px',
+    padding: '0.4rem',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+    transition: 'border-color 0.2s, box-shadow 0.2s',
+  },
+  heroPromptInput: {
+    flex: 1,
+    padding: '1rem 1.25rem',
+    fontSize: '1.1rem',
+    color: 'var(--text)',
+    background: 'transparent',
+    border: 'none',
+    outline: 'none',
+  },
+  promptBtn: {
+    padding: '0.875rem 1.75rem',
+    marginRight: '0.2rem',
+    background: 'var(--accent)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '8px',
+    fontWeight: 600,
+    fontSize: '1rem',
+    cursor: 'pointer',
+    transition: 'background 0.2s',
+  },
+  heroSuggestions: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '0.5rem',
+    justifyContent: 'center',
+    marginBottom: '2rem',
+  },
+  heroPill: {
+    padding: '0.4rem 0.8rem',
+    background: 'rgba(255,255,255,0.03)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: '999px',
+    color: 'var(--muted)',
+    fontSize: '0.85rem',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
   },
   landingTitle: {
     fontSize: '2.5rem',
@@ -899,6 +1113,34 @@ const styles = {
     width: '100%',
     maxWidth: '320px',
     padding: '0.5rem 0.75rem',
+  },
+  emptyStateCard: {
+    marginBottom: '1rem',
+    padding: '1.25rem',
+    border: '1px solid var(--border)',
+    borderRadius: '12px',
+    background: 'var(--surface)',
+  },
+  emptyStateTitle: {
+    margin: 0,
+    fontSize: '1rem',
+    fontWeight: 600,
+  },
+  emptyStateText: {
+    marginTop: '0.45rem',
+    color: 'var(--muted)',
+    fontSize: '0.85rem',
+    lineHeight: 1.5,
+  },
+  emptyStateAction: {
+    marginTop: '0.75rem',
+    background: 'transparent',
+    color: 'var(--accent)',
+    border: '1px solid var(--accent)',
+    borderRadius: '8px',
+    padding: '0.45rem 0.8rem',
+    fontSize: '0.85rem',
+    fontWeight: 600,
   },
   templateGrid: {
     display: 'grid',
@@ -1230,5 +1472,172 @@ const styles = {
     color: '#fff',
     fontSize: '0.8rem',
     fontWeight: 600,
+  },
+
+  // New Landing Layout Styles
+  landingFull: {
+    minHeight: '100vh',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    background: 'var(--bg)',
+    paddingTop: '6rem',
+    overflowY: 'auto',
+  },
+  landingHero: {
+    padding: '2rem',
+    width: '100%',
+    display: 'flex',
+    justifyContent: 'center',
+    marginBottom: '6rem',
+  },
+  sectionTitle: {
+    fontSize: '2rem',
+    fontWeight: 700,
+    marginBottom: '2rem',
+    textAlign: 'center',
+    color: 'var(--text)',
+  },
+  socialProofSection: {
+    width: '100%',
+    maxWidth: '800px',
+    padding: '4rem 2rem',
+    textAlign: 'center',
+    borderTop: '1px solid var(--border)',
+    borderBottom: '1px solid var(--border)',
+    background: 'var(--surface)',
+  },
+  testimonial: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '1rem',
+  },
+  quote: {
+    fontSize: '1.25rem',
+    fontStyle: 'italic',
+    color: 'var(--text)',
+    maxWidth: '600px',
+    lineHeight: 1.6,
+  },
+  quoteAuthor: {
+    fontSize: '0.9rem',
+    fontWeight: 600,
+    color: 'var(--muted)',
+  },
+  pricingSection: {
+    width: '100%',
+    maxWidth: '1000px',
+    padding: '6rem 2rem',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  pricingCards: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '2rem',
+    justifyContent: 'center',
+    marginTop: '1rem',
+    width: '100%',
+  },
+  pricingCard: {
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: '16px',
+    padding: '2.5rem',
+    width: '100%',
+    maxWidth: '340px',
+    display: 'flex',
+    flexDirection: 'column',
+    position: 'relative',
+    boxShadow: 'var(--shadow-md)',
+  },
+  proCard: {
+    border: '2px solid var(--accent)',
+    transform: 'scale(1.05)',
+    boxShadow: '0 0 30px rgba(99,102,241,0.15)',
+  },
+  popularBadge: {
+    position: 'absolute',
+    top: '-12px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    background: 'var(--accent)',
+    color: '#fff',
+    padding: '0.25rem 0.75rem',
+    borderRadius: '999px',
+    fontSize: '0.75rem',
+    fontWeight: 600,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+  },
+  planName: {
+    fontSize: '1.25rem',
+    fontWeight: 600,
+    marginBottom: '1rem',
+  },
+  planPrice: {
+    fontSize: '2.5rem',
+    fontWeight: 700,
+    marginBottom: '1.5rem',
+    display: 'flex',
+    alignItems: 'baseline',
+    gap: '0.25rem',
+  },
+  planMo: {
+    fontSize: '1rem',
+    color: 'var(--muted)',
+    fontWeight: 400,
+  },
+  planList: {
+    listStyle: 'none',
+    padding: 0,
+    margin: '0 0 2rem 0',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1rem',
+    flex: 1,
+  },
+  planCheck: {
+    color: 'var(--accent)',
+    fontWeight: 'bold',
+    marginRight: '0.5rem',
+  },
+  planUpgradeBtn: {
+    width: '100%',
+    padding: '0.875rem',
+    background: 'var(--accent)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '8px',
+    fontWeight: 600,
+    fontSize: '1rem',
+    cursor: 'pointer',
+    marginTop: 'auto',
+  },
+  faqSection: {
+    width: '100%',
+    maxWidth: '800px',
+    padding: '2rem 2rem 6rem',
+  },
+  faqGrid: {
+    display: 'grid',
+    gap: '2rem',
+  },
+  faqItem: {
+    padding: '1.5rem',
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: '12px',
+  },
+  faqQ: {
+    fontSize: '1.1rem',
+    fontWeight: 600,
+    marginBottom: '0.75rem',
+  },
+  faqA: {
+    color: 'var(--muted)',
+    lineHeight: 1.6,
   },
 }
