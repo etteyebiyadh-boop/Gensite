@@ -4,6 +4,7 @@ import { requestAiSite, getQuickSuggestions } from './aiDesigner'
 import { getTemplateById, getDefaultContent, getTemplatesByCategory } from './templates'
 import { generateHtml } from './generateHtml'
 import { createSite, supabase } from './lib/siteApi'
+import { filterAndGroupFields } from './lib/editorFields'
 import Dashboard from './pages/Dashboard'
 import AuthModal from './components/AuthModal'
 import Wizard from './components/Wizard'
@@ -275,6 +276,7 @@ function Builder({ onBack, initialSetup, onPricing }) {
   const [dashboardCreating, setDashboardCreating] = useState(false)
   const [aiEditInput, setAiEditInput] = useState('')
   const [aiEditLoading, setAiEditLoading] = useState(false)
+  const [fieldSearch, setFieldSearch] = useState('')
   const [previewMode, setPreviewMode] = useState('desktop') // 'desktop' | 'tablet' | 'mobile'
   const [expandedCategories, setExpandedCategories] = useState(() => new Set()) // which categories show all templates
   const [isMobile, setIsMobile] = useState(
@@ -289,6 +291,16 @@ function Builder({ onBack, initialSetup, onPricing }) {
   const templatesByCategory = useMemo(
     () => getTemplatesByCategory(searchQuery),
     [searchQuery]
+  )
+
+  const groupedEditFields = useMemo(
+    () => filterAndGroupFields(template?.fields || [], fieldSearch),
+    [template?.fields, fieldSearch]
+  )
+
+  const visibleEditFieldCount = useMemo(
+    () => groupedEditFields.reduce((sum, group) => sum + group.fields.length, 0),
+    [groupedEditFields]
   )
 
   useEffect(() => {
@@ -365,6 +377,20 @@ function Builder({ onBack, initialSetup, onPricing }) {
 
   function updateField(key, value) {
     setContent((prev) => ({ ...prev, [key]: value }))
+  }
+
+  function resetField(field) {
+    updateField(field.key, field.default ?? '')
+  }
+
+  function resetGroup(fields) {
+    setContent((prev) => {
+      const next = { ...prev }
+      fields.forEach((field) => {
+        next[field.key] = field.default ?? ''
+      })
+      return next
+    })
   }
 
   async function handleAiSend(e) {
@@ -574,33 +600,87 @@ function Builder({ onBack, initialSetup, onPricing }) {
           }}
         >
           <aside style={styles.sidebar}>
-            <h3 style={styles.sidebarTitle}>Edit content</h3>
-            {template.fields.map((f) => (
-              <label key={f.key} style={styles.field}>
-                <span>{f.label}</span>
-                {f.type === 'color' ? (
-                  <input
-                    type="color"
-                    value={content[f.key] ?? f.default}
-                    onChange={(e) => updateField(f.key, e.target.value)}
-                    style={styles.colorInput}
-                  />
-                ) : f.type === 'textarea' ? (
-                  <textarea
-                    value={content[f.key] ?? ''}
-                    onChange={(e) => updateField(f.key, e.target.value)}
-                    rows={3}
-                    style={styles.input}
-                  />
-                ) : (
-                  <input
-                    type="text"
-                    value={content[f.key] ?? ''}
-                    onChange={(e) => updateField(f.key, e.target.value)}
-                    style={styles.input}
-                  />
+            <h3 style={styles.sidebarTitle}>Content studio</h3>
+            <div style={styles.editorToolbar}>
+              <input
+                type="search"
+                value={fieldSearch}
+                onChange={(e) => setFieldSearch(e.target.value)}
+                placeholder="Search fields..."
+                style={styles.editorSearchInput}
+              />
+              <div style={styles.editorStatsRow}>
+                <span style={styles.editorStatPill}>
+                  {visibleEditFieldCount}/{template.fields.length} shown
+                </span>
+                {fieldSearch && (
+                  <button
+                    type="button"
+                    style={styles.editorClearBtn}
+                    onClick={() => setFieldSearch('')}
+                  >
+                    Clear
+                  </button>
                 )}
-              </label>
+              </div>
+            </div>
+            {groupedEditFields.length === 0 && (
+              <div style={styles.editorEmptyState}>
+                No fields found for "{fieldSearch}".
+              </div>
+            )}
+            {groupedEditFields.map(({ group, fields }) => (
+              <div key={group} style={styles.editorGroup}>
+                <div style={styles.editorGroupHead}>
+                  <h4 style={styles.editorGroupTitle}>
+                    {group}
+                    <span style={styles.editorGroupCount}>{fields.length}</span>
+                  </h4>
+                  <button
+                    type="button"
+                    style={styles.editorGroupReset}
+                    onClick={() => resetGroup(fields)}
+                  >
+                    Reset section
+                  </button>
+                </div>
+                {fields.map((f) => (
+                  <div key={f.key} style={styles.fieldCard}>
+                    <div style={styles.fieldHead}>
+                      <label style={styles.fieldLabel}>{f.label}</label>
+                      <button
+                        type="button"
+                        style={styles.fieldResetBtn}
+                        onClick={() => resetField(f)}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                    {f.type === 'color' ? (
+                      <input
+                        type="color"
+                        value={content[f.key] ?? f.default}
+                        onChange={(e) => updateField(f.key, e.target.value)}
+                        style={styles.colorInput}
+                      />
+                    ) : f.type === 'textarea' ? (
+                      <textarea
+                        value={content[f.key] ?? ''}
+                        onChange={(e) => updateField(f.key, e.target.value)}
+                        rows={3}
+                        style={styles.input}
+                      />
+                    ) : (
+                      <input
+                        type="text"
+                        value={content[f.key] ?? ''}
+                        onChange={(e) => updateField(f.key, e.target.value)}
+                        style={styles.input}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
             ))}
             <div style={styles.aiGeneratorBlock}>
               <h3 style={styles.aiGeneratorTitle}>AI content generator</h3>
@@ -1217,6 +1297,122 @@ const styles = {
   sidebarTitle: {
     marginBottom: '1rem',
     fontSize: '1rem',
+    fontWeight: 600,
+  },
+  editorToolbar: {
+    marginBottom: '0.9rem',
+    padding: '0.75rem',
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    background: 'rgba(255, 255, 255, 0.02)',
+  },
+  editorSearchInput: {
+    width: '100%',
+    padding: '0.5rem 0.65rem',
+    borderRadius: '8px',
+    border: '1px solid var(--border)',
+    background: 'var(--bg)',
+    color: 'var(--text)',
+    fontSize: '0.84rem',
+  },
+  editorStatsRow: {
+    marginTop: '0.55rem',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.45rem',
+    flexWrap: 'wrap',
+  },
+  editorStatPill: {
+    padding: '0.2rem 0.45rem',
+    borderRadius: '999px',
+    fontSize: '0.72rem',
+    fontWeight: 600,
+    color: 'var(--accent)',
+    background: 'rgba(99, 102, 241, 0.14)',
+  },
+  editorClearBtn: {
+    border: '1px solid var(--border)',
+    background: 'transparent',
+    color: 'var(--muted)',
+    borderRadius: '999px',
+    padding: '0.2rem 0.5rem',
+    fontSize: '0.72rem',
+  },
+  editorEmptyState: {
+    marginBottom: '0.9rem',
+    border: '1px dashed var(--border)',
+    borderRadius: '10px',
+    padding: '0.75rem',
+    textAlign: 'center',
+    color: 'var(--muted)',
+    fontSize: '0.82rem',
+  },
+  editorGroup: {
+    marginBottom: '0.9rem',
+  },
+  editorGroupHead: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '0.45rem',
+  },
+  editorGroupTitle: {
+    margin: 0,
+    fontSize: '0.76rem',
+    letterSpacing: '0.06em',
+    textTransform: 'uppercase',
+    color: 'var(--muted)',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.4rem',
+  },
+  editorGroupCount: {
+    minWidth: '1.2rem',
+    height: '1.2rem',
+    borderRadius: '999px',
+    background: 'var(--border)',
+    color: 'var(--text)',
+    fontSize: '0.68rem',
+    padding: '0 0.25rem',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editorGroupReset: {
+    border: '1px solid var(--border)',
+    borderRadius: '999px',
+    background: 'transparent',
+    color: 'var(--muted)',
+    padding: '0.2rem 0.5rem',
+    fontSize: '0.68rem',
+    fontWeight: 600,
+  },
+  fieldCard: {
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    padding: '0.65rem',
+    marginBottom: '0.6rem',
+    background: 'rgba(255, 255, 255, 0.02)',
+  },
+  fieldHead: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '0.5rem',
+    marginBottom: '0.4rem',
+  },
+  fieldLabel: {
+    fontSize: '0.84rem',
+    fontWeight: 600,
+    color: 'var(--text)',
+  },
+  fieldResetBtn: {
+    border: '1px solid var(--border)',
+    borderRadius: '999px',
+    background: 'transparent',
+    color: 'var(--muted)',
+    padding: '0.15rem 0.45rem',
+    fontSize: '0.65rem',
     fontWeight: 600,
   },
   field: {
